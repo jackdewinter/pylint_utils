@@ -1,0 +1,34 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+black = "*"
+isort = "*"
+flake8 = "*"
+pylint = "*"
+pytest-cov = "==2.10.1"
+pytest-console-scripts = "*"
+pytest-timeout = "*"
+tabulate = "*"
+pytest-html = "*"
+snakeviz = "*"
+typing-extensions = "*"
+typed-ast = "==1.4.2"
+twine = "*"
+setuptools = "*"
+coverage = "==4.5.4"
+columnar = "==1.3.1"
+application-properties = "==0.5.0"
+requests = "==2.26.0"
+pytest-xdist = "*"
+pymarkdownlnt = "*"
+
+[requires]
+python_version = "3.8"
+
+[pipenv]
+allow_prereleases = true
