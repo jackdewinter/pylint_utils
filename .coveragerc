@@ -1,5 +1,5 @@
 [run]
-source = pymarkdown
+source = pylint_utils
 
 [report]
 exclude_lines =

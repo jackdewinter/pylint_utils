@@ -1,0 +1,31 @@
+{
+    "projectName": "?",
+    "reportSource": "pytest",
+    "measurements": [
+        {
+            "name": "test.test_main",
+            "totalTests": 4,
+            "failedTests": 0,
+            "errorTests": 0,
+            "skippedTests": 0,
+            "elapsedTimeInMilliseconds": 0
+        },
+        {
+            "name": "test.test_one",
+            "totalTests": 1,
+            "failedTests": 0,
+            "errorTests": 0,
+            "skippedTests": 0,
+            "elapsedTimeInMilliseconds": 0
+        },
+        {
+            "name": "test.test_scanning_support",
+            "totalTests": 14,
+            "failedTests": 0,
+            "errorTests": 0,
+            "skippedTests": 0,
+            "elapsedTimeInMilliseconds": 0
+        }
+    ]
+}
+

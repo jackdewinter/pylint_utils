@@ -23,6 +23,9 @@ def write_temporary_configuration(supplied_configuration):
 
 @staticmethod
 def make_string_visible(expected_string):
+    """
+    Simple function to make a string visible.
+    """
     return expected_string.replace("\n", "\\n")
 
 

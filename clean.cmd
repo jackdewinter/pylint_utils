@@ -76,36 +76,41 @@ if ERRORLEVEL 1 (
 )
 
 echo {Executing pylint utils analyzer on Python source code to verify suppressions and document them.}
-pipenv run python main.py --config setup.cfg -r publish\pylint_suppression.json  pymarkdown
+pipenv run python ..\pylint_utils\main.py --config setup.cfg -r publish\pylint_suppression.json  %PYTHON_MODULE_NAME%
 if ERRORLEVEL 1 (
 	echo.
 	echo {Executing reporting of pylint suppressions in Python source code failed.}
 	goto error_end
 )
 
-git diff --name-only --staged > %CLEAN_TEMPFILE%
-set TOT=
-for /f "tokens=*" %%x in (%CLEAN_TEMPFILE%) do (
-	set TOT=!TOT! %%x
-)
-echo %TOT%
-pipenv run python main.py --config setup.cfg -s %TOT%
-if ERRORLEVEL 1 (
-	echo.
-	echo {Executing reporting of unused pylint suppressions in modified Python source code failed.}
-	goto error_end
-)
-
 echo {Executing pylint static analyzer on test Python code.}
-pipenv run pylint -j 4 --rcfile=setup.cfg test %MY_VERBOSE%
+pipenv run pylint -j 4 --rcfile=setup.cfg test --ignore test\resources %MY_VERBOSE%
 if ERRORLEVEL 1 (
 	echo.
 	echo {Executing pylint static analyzer on test Python code failed.}
 	goto error_end
+)	
+
+git diff --name-only --staged > %CLEAN_TEMPFILE%
+set ALL_FILES=
+for /f "tokens=*" %%x in (%CLEAN_TEMPFILE%) do (
+	set TEST_FILE=%%x
+	if /i [!TEST_FILE:~-3!]==[.py] set ALL_FILES=!ALL_FILES! !TEST_FILE!
+)
+if "%ALL_FILES%" == "" (
+	echo {Not executing pylint suppression checker on Python source code. No eligible Python files staged.}
+) else (
+	echo {Executing pylint suppression checker on Python source code.}
+	pipenv run python ..\pylint_utils\main.py --config setup.cfg -s %ALL_FILES%
+	if ERRORLEVEL 1 (
+		echo.
+		echo {Executing reporting of unused pylint suppressions in modified Python source code failed.}
+		goto error_end
+	)
 )
 
 echo {Executing PyMarkdown scan on Markdown documents.}
-pipenv run pymarkdownlnt --config clean.json scan . ./docs
+pipenv run pymarkdownlnt --config clean.json scan .
 if ERRORLEVEL 1 (
 	echo.
 	echo {PyMarkdown scan on Markdown documents failed.}

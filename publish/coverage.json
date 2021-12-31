@@ -1,0 +1,13 @@
+{
+    "projectName": "pylint_utils",
+    "reportSource": "pytest",
+    "branchLevel": {
+        "totalMeasured": 170,
+        "totalCovered": 48
+    },
+    "lineLevel": {
+        "totalMeasured": 446,
+        "totalCovered": 195
+    }
+}
+

@@ -1,0 +1,20 @@
+{
+    "disables-by-file": {
+        "pylint_utils/__init__.py": {},
+        "pylint_utils/__main__.py": {},
+        "pylint_utils/file_scanner.py": {},
+        "pylint_utils/main.py": {
+            "too-many-instance-attributes": 1,
+            "too-many-arguments": 1,
+            "too-many-locals": 1,
+            "consider-using-dict-items": 1
+        },
+        "pylint_utils/version.py": {}
+    },
+    "disables-by-name": {
+        "too-many-instance-attributes": 1,
+        "too-many-arguments": 1,
+        "too-many-locals": 1,
+        "consider-using-dict-items": 1
+    }
+}

@@ -3,7 +3,6 @@ Module to ...
 """
 
 import argparse
-import glob
 import json
 import logging
 import os
@@ -12,6 +11,8 @@ import runpy
 import subprocess
 import sys
 import time
+
+from pylint_utils.file_scanner import FileScanner
 
 LOGGER = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ class PyLintUtils:
         assert os.path.isabs(file_path)
         file_path = file_path.replace(os.sep, "/")
         last_index = file_path.rindex("/")
-        file_path = file_path[0 : last_index + 1] + "version.py"
+        file_path = file_path[: last_index + 1] + "version.py"
         version_meta = runpy.run_path(file_path)
         return version_meta["__version__"]
 
@@ -70,6 +71,13 @@ class PyLintUtils:
     def __parse_arguments(self):
         parser = argparse.ArgumentParser(
             description="Analyze any found Python files for PyLint suppressions."
+        )
+        parser.add_argument(
+            "--verbose",
+            dest="verbose_mode",
+            action="store_true",
+            default=False,
+            help="show lots of stuff",
         )
         parser.add_argument(
             "--version", action="version", version=f"{self.__version_number}"
@@ -112,28 +120,14 @@ class PyLintUtils:
             help="destination file for disabled errors report",
         )
         parser.add_argument(
-            "-l",
             "--list-files",
             dest="list_files",
             action="store_true",
             default=False,
             help="list the markdown files found and exit",
         )
-        parser.add_argument(
-            "-v",
-            "--verbose",
-            dest="verbose_mode",
-            action="store_true",
-            default=False,
-            help="show lots of stuff",
-        )
-        parser.add_argument(
-            "paths",
-            metavar="path",
-            type=str,
-            nargs="+",
-            help="One or more paths to scan for eligible files",
-        )
+
+        FileScanner.add_standard_arguments(parser)
 
         return parser.parse_args()
 
@@ -255,79 +249,6 @@ class PyLintUtils:
         return 1
 
     @classmethod
-    def __is_file_eligible_to_scan(cls, path_to_test):
-        """
-        Determine if the presented path is one that we want to scan.
-        """
-        return path_to_test.endswith(".py")
-
-    def __process_next_path(self, next_path, files_to_parse):
-
-        did_find_any = False
-        LOGGER.info("Determining files to scan for path '%s'.", next_path)
-        if not os.path.exists(next_path):
-            print(
-                f"Provided path '{next_path}' does not exist.",
-                file=sys.stderr,
-            )
-            LOGGER.debug("Provided path '%s' does not exist.", next_path)
-        elif os.path.isdir(next_path):
-            LOGGER.debug(
-                "Provided path '%s' is a directory. Walking directory.", next_path
-            )
-            did_find_any = True
-            for root, _, files in os.walk(next_path):
-                root = root.replace("\\", "/")
-                for file in files:
-                    rooted_file_path = root + "/" + file
-                    if self.__is_file_eligible_to_scan(rooted_file_path):
-                        files_to_parse.add(rooted_file_path)
-        elif self.__is_file_eligible_to_scan(next_path):
-            LOGGER.debug(
-                "Provided path '%s' is a valid file. Adding.",
-                next_path,
-            )
-            files_to_parse.add(next_path)
-            did_find_any = True
-        else:
-            LOGGER.debug(
-                "Provided path '%s' is not a valid file. Skipping.",
-                next_path,
-            )
-            print(
-                f"Provided file path '{next_path}' is not a valid file. Skipping.",
-                file=sys.stderr,
-            )
-        return did_find_any
-
-    def __determine_files_to_scan(self, eligible_paths):
-
-        did_error_scanning_files = False
-        files_to_parse = set()
-        for next_path in eligible_paths:
-            if "*" in next_path or "?" in next_path:
-                globbed_paths = glob.glob(next_path)
-                if not globbed_paths:
-                    print(
-                        f"Provided glob path '{next_path}' did not match any files.",
-                        file=sys.stderr,
-                    )
-                    did_error_scanning_files = True
-                    break
-                for next_globbed_path in globbed_paths:
-                    next_globbed_path = next_globbed_path.replace("\\", "/")
-                    self.__process_next_path(next_globbed_path, files_to_parse)
-            elif not self.__process_next_path(next_path, files_to_parse):
-                did_error_scanning_files = True
-                break
-
-        files_to_parse = list(files_to_parse)
-        files_to_parse.sort()
-
-        LOGGER.info("Number of files found: %s", str(len(files_to_parse)))
-        return files_to_parse, did_error_scanning_files
-
-    @classmethod
     def _get_env(cls):
         """
         Extracts the environment PYTHONPATH and appends the current sys.path to those.
@@ -341,28 +262,30 @@ class PyLintUtils:
         This and _gen_env were ripped off from the lint.lint() function wholesale, to provide
         for a more usable interface
         """
-        # traverse downwards until we are out of a python package
-        if False:
-            full_path = osp.abspath(filename)
-            parent_path = osp.dirname(full_path)
-            child_path = osp.basename(full_path)
+        # TODO traverse downwards until we are out of a python package
+        # OR
+        # have command line specify the actual root to use, overriding all this.
+        # if False:
+        #     full_path = osp.abspath(filename)
+        #     parent_path = osp.dirname(full_path)
+        #     child_path = osp.basename(full_path)
 
-            while parent_path != "/" and osp.exists(
-                osp.join(parent_path, "__init__.py")
-            ):
-                child_path = osp.join(osp.basename(parent_path), child_path)
-                parent_path = osp.dirname(parent_path)
-        else:
-            xx = filename.rindex("/")
-            # print("xx-->" + str(xx))
-            if xx == -1 or True:
-                child_path = filename.replace("/", "\\")
-                parent_path = "."
-            else:
-                child_path = filename[xx + 1 :]
-                parent_path = filename[0:xx]
-            # print("pp-->" + str(parent_path))
-            parent_path = osp.abspath(parent_path)
+        #     while parent_path != "/" and osp.exists(
+        #         osp.join(parent_path, "__init__.py")
+        #     ):
+        #         child_path = osp.join(osp.basename(parent_path), child_path)
+        #         parent_path = osp.dirname(parent_path)
+        # else:
+        # xx = filename.rindex("/")
+        # print("xx-->" + str(xx))
+        # if xx == -1 or True:
+        child_path = filename.replace("/", "\\")
+        parent_path = "."
+        # else:
+        #     child_path = filename[xx + 1 :]
+        #     parent_path = filename[0:xx]
+        # print("pp-->" + str(parent_path))
+        parent_path = osp.abspath(parent_path)
 
         # Start pylint, ensuring that we use the python and pylint associated
         # with the running epylint
@@ -420,13 +343,13 @@ class PyLintUtils:
         last_line_index = len(modified_content) - 1
         last_line = modified_content[last_line_index]
         if last_line.endswith("\n"):
-            last_line = last_line[0:-1].strip()
+            last_line = last_line[:-1].strip()
 
         # Remove any trailing blank lines
         while not last_line:
             new_last_line = modified_content[last_line_index - 1]
             if new_last_line.endswith("\n"):
-                new_last_line = new_last_line[0:-1].strip()
+                new_last_line = new_last_line[:-1].strip()
             if not new_last_line:
                 del modified_content[-1]
             last_line_index -= 1
@@ -565,7 +488,7 @@ class PyLintUtils:
         last_slash_index = next_file.rfind("/")
         assert last_slash_index != -1
         new_file_name = (
-            next_file[0:last_slash_index] + "/__" + next_file[last_slash_index + 1 :]
+            next_file[:last_slash_index] + "/__" + next_file[last_slash_index + 1 :]
         )
 
         self.__emit_dot_tracker_header(disable_enabled_log)
@@ -743,12 +666,11 @@ class PyLintUtils:
         try:
             self.__initialize_logging(args)
 
-            files_to_scan, error_scanning_files = self.__determine_files_to_scan(
-                args.paths
+            files_to_scan, error_scanning_files = FileScanner().determine_files_to_scan(
+                args
             )
             total_error_count = 0
             if error_scanning_files:
-                print("No Python files found to scan.")
                 return_code = 1
             elif args.list_files:
                 return_code = self.__handle_list_files(files_to_scan)

@@ -73,7 +73,7 @@ class InProcessResult:
             text_value = expected_text.replace("\n", "\\n")
             print(f"WARN>expect>>{text_value}")
             if log_extra:
-                print(f"log_extra:{log_extra}")
+                print(f"Additional comparison: {log_extra}")
             assert False, f"{stream_name} not as expected:\n{diff_values}"
 
     # pylint: enable=too-many-arguments
@@ -217,7 +217,7 @@ class InProcessExecution(ABC):
         self,
         arguments=None,
         cwd=None,
-        disable_version_checking=True,
+        disable_version_checking=False,
     ):
         """
         Invoke the mainline so that we can capture results.
