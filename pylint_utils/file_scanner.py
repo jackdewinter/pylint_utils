@@ -16,10 +16,19 @@ class FileScanner:
     """
 
     @staticmethod
-    def add_standard_arguments(parser):
+    def add_standard_arguments(parser, add_list_files_argument=False):
         """
         Add any required arguments for scanning for files to the command line.
         """
+
+        if add_list_files_argument:
+            parser.add_argument(
+                "--list-files",
+                dest="list_files",
+                action="store_true",
+                default=False,
+                help="list the files found and exit",
+            )
 
         parser.add_argument(
             "--recurse",
@@ -176,3 +185,20 @@ class FileScanner:
 
         LOGGER.info("Number of files found: %s", str(len(files_to_parse)))
         return files_to_parse, did_error_scanning_files
+
+    @staticmethod
+    def handle_list_files_if_argument_present(args, files_to_scan):
+        """
+        If the `add_standard_arguments` function added a list files argument and it was
+        set, then process.  Otherwise return None.
+        """
+
+        if not args.list_files:
+            return None
+
+        if files_to_scan:
+            print("\n".join(files_to_scan))
+            return 0
+
+        print("No matching files found.", file=sys.stderr)
+        return 1

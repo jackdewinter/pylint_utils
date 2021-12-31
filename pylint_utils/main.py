@@ -3,7 +3,6 @@ Module to ...
 """
 
 import argparse
-import json
 import logging
 import os
 import os.path as osp
@@ -13,41 +12,23 @@ import sys
 import time
 
 from pylint_utils.file_scanner import FileScanner
+from pylint_utils.pylint_comment_scanner import PyLintCommentScanner
+from pylint_utils.simple_logging import SimpleLogging
 
 LOGGER = logging.getLogger(__name__)
 
 
-# pylint: disable=too-many-instance-attributes
 class PyLintUtils:
     """
     Class to provide for...
     """
 
-    __available_log_maps = {
-        "CRITICAL": logging.CRITICAL,
-        "ERROR": logging.ERROR,
-        "WARNING": logging.WARNING,
-        "INFO": logging.INFO,
-        "DEBUG": logging.DEBUG,
-    }
-
-    __pylint_suppression_prefix = "# pylint:"
-    __pylint_suppression_disable = "disable="
-    __pylint_suppression_enable = "enable="
-    __too_many_lines_item = "too-many-lines"
     __default_log_level = "CRITICAL"
 
     def __init__(self):
-        (
-            self.__version_number,
-            self.default_log_level,
-        ) = (PyLintUtils.__get_semantic_version(), PyLintUtils.__default_log_level)
-        self.__current_file_name = None
-        self.errors_reported = None
-        self.__scan_map = {}
+        self.__version_number = PyLintUtils.__get_semantic_version()
         self.__verbose_mode = None
         self.__is_being_piped = None
-        self.__new_handler = None
 
     @staticmethod
     def __get_semantic_version():
@@ -58,15 +39,6 @@ class PyLintUtils:
         file_path = file_path[: last_index + 1] + "version.py"
         version_meta = runpy.run_path(file_path)
         return version_meta["__version__"]
-
-    @staticmethod
-    def __log_level_type(argument):
-        """
-        Function to help argparse limit the valid log levels.
-        """
-        if argument in PyLintUtils.__available_log_maps:
-            return argument
-        raise ValueError("Value '" + argument + "' is not a valid log level.")
 
     def __parse_arguments(self):
         parser = argparse.ArgumentParser(
@@ -83,21 +55,8 @@ class PyLintUtils:
             "--version", action="version", version=f"{self.__version_number}"
         )
 
-        parser.add_argument(
-            "--log-level",
-            dest="log_level",
-            action="store",
-            default=PyLintUtils.__default_log_level,
-            help="minimum level for any log messages",
-            type=PyLintUtils.__log_level_type,
-            choices=list(PyLintUtils.__available_log_maps.keys()),
-        )
-        parser.add_argument(
-            "--log-file",
-            dest="log_file",
-            action="store",
-            help="destination file for log messages",
-        )
+        SimpleLogging.add_standard_arguments(parser, PyLintUtils.__default_log_level)
+
         parser.add_argument(
             "--config",
             dest="config_file",
@@ -119,134 +78,10 @@ class PyLintUtils:
             action="store",
             help="destination file for disabled errors report",
         )
-        parser.add_argument(
-            "--list-files",
-            dest="list_files",
-            action="store_true",
-            default=False,
-            help="list the markdown files found and exit",
-        )
 
-        FileScanner.add_standard_arguments(parser)
+        FileScanner.add_standard_arguments(parser, add_list_files_argument=True)
 
         return parser.parse_args()
-
-    @classmethod
-    def __decompose_valid_pyline_line(cls, directive_text, directive_action):
-        remaining_line = directive_text[len(directive_action) :]
-
-        collected_items = []
-        next_comma_index = remaining_line.find(",")
-        while next_comma_index != -1:
-            part_before_comma = remaining_line[:next_comma_index].strip()
-            collected_items.append(part_before_comma)
-            remaining_line = remaining_line[next_comma_index + 1 :].strip()
-            next_comma_index = remaining_line.find(",")
-        collected_items.append(remaining_line.strip())
-
-        return collected_items
-
-    def __report_error(self, line_count, error_string):
-        print(f"{self.__current_file_name}({line_count}): {error_string}")
-        self.errors_reported += 1
-
-    def __record_disabled_items(
-        self, active_items_map, line_count, total_disable_counts, list_of_items
-    ):
-        for next_item in list_of_items:
-            lowercase_next_item = next_item.lower()
-            if lowercase_next_item == PyLintUtils.__too_many_lines_item:
-                continue
-            if lowercase_next_item in active_items_map:
-                self.__report_error(
-                    line_count,
-                    f"Pylint error '{lowercase_next_item}' was already disabled.",
-                )
-            else:
-                active_items_map[lowercase_next_item] = line_count
-
-            if next_item in total_disable_counts:
-                current_count = total_disable_counts[next_item]
-            else:
-                current_count = 0
-            current_count += 1
-            total_disable_counts[next_item] = current_count
-
-    def __record_enable_items(
-        self, active_items_map, line_count, list_of_items, disable_enabled_log
-    ):
-        for next_item in list_of_items:
-            lowercase_next_item = next_item.lower()
-            if lowercase_next_item == PyLintUtils.__too_many_lines_item:
-                continue
-            if lowercase_next_item not in active_items_map:
-                self.__report_error(
-                    line_count,
-                    f"Pylint error '{lowercase_next_item}' was not disabled, so enable is ignored.",
-                )
-            else:
-                line_disabled_on = active_items_map[lowercase_next_item]
-                del active_items_map[lowercase_next_item]
-                new_entry = (line_disabled_on, line_count, next_item)
-                disable_enabled_log.append(new_entry)
-
-    def __check_contents_of_python_file(self, file_name, file_contents):
-
-        self.__current_file_name = file_name
-        self.errors_reported = 0
-
-        active_items_map = {}
-        line_count = 1
-        total_disable_counts = {}
-        disable_enabled_log = []
-        for next_line in file_contents:
-            stripped_next_line = next_line.strip()
-            if stripped_next_line.startswith(PyLintUtils.__pylint_suppression_prefix):
-                pylint_directive = stripped_next_line[
-                    len(PyLintUtils.__pylint_suppression_prefix) :
-                ].strip()
-                if pylint_directive.startswith(
-                    PyLintUtils.__pylint_suppression_disable
-                ):
-                    collected_items = self.__decompose_valid_pyline_line(
-                        pylint_directive, PyLintUtils.__pylint_suppression_disable
-                    )
-                    self.__record_disabled_items(
-                        active_items_map,
-                        line_count,
-                        total_disable_counts,
-                        collected_items,
-                    )
-                elif pylint_directive.startswith(
-                    PyLintUtils.__pylint_suppression_enable
-                ):
-                    collected_items = self.__decompose_valid_pyline_line(
-                        pylint_directive, PyLintUtils.__pylint_suppression_enable
-                    )
-                    self.__record_enable_items(
-                        active_items_map,
-                        line_count,
-                        collected_items,
-                        disable_enabled_log,
-                    )
-            line_count += 1
-        if active_items_map:
-            for lowercase_next_item in active_items_map:
-                self.__report_error(
-                    line_count,
-                    f"Pylint error '{lowercase_next_item}' was disabled, but not re-enabled.",
-                )
-
-        return total_disable_counts, self.errors_reported, disable_enabled_log
-
-    @classmethod
-    def __handle_list_files(cls, files_to_scan):
-
-        if files_to_scan:
-            print("\n".join(files_to_scan))
-            return 0
-        print("No matching files found.", file=sys.stderr)
-        return 1
 
     @classmethod
     def _get_env(cls):
@@ -539,89 +374,12 @@ class PyLintUtils:
 
     # pylint: enable=too-many-locals
 
-    def __initialize_logging(self, args):
-        base_logger = logging.getLogger()
-        self.__new_handler = None
-        if args.log_file:
-            self.__new_handler = logging.FileHandler(args.log_file)
-            self.__new_handler.setLevel(
-                PyLintUtils.__available_log_maps[args.log_level]
-            )
-            base_logger.addHandler(self.__new_handler)
-        else:
-            base_logger.setLevel(PyLintUtils.__available_log_maps[args.log_level])
-
-    def __terminate_logging(self):
-        if self.__new_handler:
-            self.__new_handler.close()
-
-    @classmethod
-    def __create_report_map(cls, disabled_by_file_name_map):
-        total_counts = {}
-        for file_name, next_file_map in disabled_by_file_name_map.items():
-            next_file_map = disabled_by_file_name_map[file_name]
-
-            for disable_item in next_file_map:
-                added_count = next_file_map[disable_item]
-
-                new_count = (
-                    total_counts[disable_item] + added_count
-                    if disable_item in total_counts
-                    else added_count
-                )
-                total_counts[disable_item] = new_count
-
-        return {
-            "disables-by-file": disabled_by_file_name_map,
-            "disables-by-name": total_counts,
-        }
-
-    def __create_report(self, args, disabled_by_file_name_map):
-        return_code = 0
-
-        entire_map = self.__create_report_map(disabled_by_file_name_map)
-
-        try:
-            with open(args.report_file, "wt", encoding="utf-8") as outfile:
-                json.dump(entire_map, outfile, indent=4)
-        except IOError as ex:
-            return_code = 1
-            assert False, f"Test configuration file was not written ({ex})."
-        return return_code
-
-    def __analyze_python_files_for_pylint_comments(self, args, files_to_scan):
-
-        disabled_by_file_name_map = {}
-        total_error_count = 0
-        for next_file in files_to_scan:
-
-            if args.verbose_mode:
-                print(f"Scanning file: {next_file}")
-
-            with open(next_file, encoding="utf-8") as python_file:
-                python_file_content = python_file.readlines()
-            (
-                disable_count_map,
-                error_count,
-                disable_enabled_log,
-            ) = self.__check_contents_of_python_file(next_file, python_file_content)
-            total_error_count += error_count
-            disabled_by_file_name_map[next_file] = disable_count_map
-
-            if not error_count:
-                self.__scan_map[next_file] = (disable_enabled_log, python_file_content)
-                if args.verbose_mode:
-                    print(f"  File contains {error_count} scan errors.")
-
-        return total_error_count, disabled_by_file_name_map
-
-    # pylint: disable=consider-using-dict-items
-    def __verify_pylint_suppressions(self, args):
+    def __verify_pylint_suppressions(self, args, pylint_scanner):
 
         return_code = 0
         all_unused_suppression_tuples = []
-        for next_file in self.__scan_map:
-            disable_enabled_log_for_file, python_file_content = self.__scan_map[
+        for next_file in pylint_scanner.scan_map:
+            disable_enabled_log_for_file, python_file_content = pylint_scanner.scan_map[
                 next_file
             ]
             if disable_enabled_log_for_file and len(disable_enabled_log_for_file) > 0:
@@ -652,7 +410,25 @@ class PyLintUtils:
             print("\nNo unused PyLint suppressions found.")
         return return_code
 
-    # pylint: enable=consider-using-dict-items
+    def __process_files_to_scan(self, args, files_to_scan):
+        return_code = 0
+        try:
+            pylint_scanner = PyLintCommentScanner()
+            total_error_count = pylint_scanner.analyze_python_files_for_pylint_comments(
+                args, files_to_scan
+            )
+            if total_error_count:
+                print(
+                    f"\nScanned python files contained {total_error_count} PyLint suppression error(s)."
+                )
+                return_code = 1
+            elif args.report_file:
+                return_code = pylint_scanner.create_report(args)
+            elif args.scan_suppressions:
+                return_code = self.__verify_pylint_suppressions(args, pylint_scanner)
+        except KeyboardInterrupt:
+            pass
+        return return_code
 
     def main(self):
         """
@@ -664,43 +440,22 @@ class PyLintUtils:
 
         return_code = 0
         try:
-            self.__initialize_logging(args)
+            SimpleLogging.initialize_logging(args)
 
             files_to_scan, error_scanning_files = FileScanner().determine_files_to_scan(
                 args
             )
-            total_error_count = 0
             if error_scanning_files:
                 return_code = 1
-            elif args.list_files:
-                return_code = self.__handle_list_files(files_to_scan)
             else:
-                try:
-                    (
-                        total_error_count,
-                        disabled_by_file_name_map,
-                    ) = self.__analyze_python_files_for_pylint_comments(
-                        args, files_to_scan
-                    )
-                    if total_error_count:
-                        print(
-                            f"\nScanned python files contained {total_error_count} PyLint suppression error(s)."
-                        )
-                        return_code = 1
-                    elif args.report_file:
-                        return_code = self.__create_report(
-                            args, disabled_by_file_name_map
-                        )
-                    elif args.scan_suppressions:
-                        return_code = self.__verify_pylint_suppressions(args)
-                except KeyboardInterrupt:
-                    pass
+                return_code = FileScanner.handle_list_files_if_argument_present(
+                    args, files_to_scan
+                )
+                if return_code is None:
+                    return_code = self.__process_files_to_scan(args, files_to_scan)
         finally:
-            self.__terminate_logging()
+            SimpleLogging.terminate_logging()
         sys.exit(return_code)
-
-
-# pylint: enable=too-many-instance-attributes
 
 
 if __name__ == "__main__":
