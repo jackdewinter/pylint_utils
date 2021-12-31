@@ -14,7 +14,8 @@ def test_dash_dash_list_files_and_test_path():
     supplied_arguments = ["--list-files", "test"]
 
     expected_return_code = 0
-    expected_output = """test/proxypylintutils.py
+    expected_output = """test/__init__.py
+test/proxypylintutils.py
 test/pytest_execute.py
 test/test_main.py
 test/test_one.py
@@ -42,7 +43,8 @@ def test_dash_dash_list_files_and_test_path_and_recurse():
     supplied_arguments = ["--list-files", "--recurse", "test"]
 
     expected_return_code = 0
-    expected_output = """test/proxypylintutils.py
+    expected_output = """test/__init__.py
+test/proxypylintutils.py
 test/pytest_execute.py
 test/resources/bad_file.py
 test/resources/yet_another_bad_file.py
@@ -278,7 +280,8 @@ def test_dash_dash_list_files_and_test_path_with_non_existant_ignore_path():
     ]
 
     expected_return_code = 0
-    expected_output = """test/proxypylintutils.py
+    expected_output = """test/__init__.py
+test/proxypylintutils.py
 test/pytest_execute.py
 test/resources/bad_file.py
 test/resources/yet_another_bad_file.py
@@ -314,7 +317,8 @@ def test_dash_dash_list_files_and_test_path_with_existant_and_specific_ignore_pa
     ]
 
     expected_return_code = 0
-    expected_output = """test/proxypylintutils.py
+    expected_output = """test/__init__.py
+test/proxypylintutils.py
 test/pytest_execute.py
 test/resources/bad_file.py
 test/resources/yet_another_bad_file.py
@@ -349,7 +353,8 @@ def test_dash_dash_list_files_and_test_path_with_existant_directory_path():
     ]
 
     expected_return_code = 0
-    expected_output = """test/proxypylintutils.py
+    expected_output = """test/__init__.py
+test/proxypylintutils.py
 test/pytest_execute.py
 test/test_main.py
 test/test_one.py
@@ -385,7 +390,8 @@ def test_dash_dash_list_files_and_test_path_with_existant_directory_path_and_spe
     ]
 
     expected_return_code = 0
-    expected_output = """test/proxypylintutils.py
+    expected_output = """test/__init__.py
+test/proxypylintutils.py
 test/pytest_execute.py
 test/test_main.py
 test/test_one.py
