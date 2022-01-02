@@ -3,6 +3,7 @@ Module to provide tests related to the basic parts of the scanner.
 """
 import os
 import runpy
+import sys
 import tempfile
 from test.proxypylintutils import ProxyPyLintUtils
 from test.utils import assert_if_strings_different
@@ -532,11 +533,18 @@ def test_scan_balanced_file_and_report_with_write_failure():
 
         expected_return_code = 1
         expected_output = ""
-        expected_error = """Unable to write to report file '{file}':
+        if sys.platform.startswith("win"):
+            expected_error = """Unable to write to report file '{file}':
   Error: [Errno 13] Permission denied: '{file}'
 """.replace(
-            "{file}", report_file_name
-        )
+                "{file}", report_file_name
+            )
+        else:
+            expected_error = """Unable to write to report file '{file}':
+  Error: [Errno 21] Is a directory: '{file}'
+""".replace(
+                "{file}", report_file_name
+            )
 
         # Act
         execute_results = scanner.invoke_main(arguments=supplied_arguments)
