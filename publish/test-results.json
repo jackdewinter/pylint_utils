@@ -3,6 +3,14 @@
     "reportSource": "pytest",
     "measurements": [
         {
+            "name": "test.test_logging",
+            "totalTests": 4,
+            "failedTests": 0,
+            "errorTests": 0,
+            "skippedTests": 0,
+            "elapsedTimeInMilliseconds": 0
+        },
+        {
             "name": "test.test_main",
             "totalTests": 4,
             "failedTests": 0,
