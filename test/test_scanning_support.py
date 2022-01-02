@@ -17,6 +17,7 @@ def test_dash_dash_list_files_and_test_path():
     expected_output = """test/__init__.py
 test/proxypylintutils.py
 test/pytest_execute.py
+test/test_logging.py
 test/test_main.py
 test/test_one.py
 test/test_scanning_support.py
@@ -48,6 +49,7 @@ test/proxypylintutils.py
 test/pytest_execute.py
 test/resources/bad_file.py
 test/resources/yet_another_bad_file.py
+test/test_logging.py
 test/test_main.py
 test/test_one.py
 test/test_scanning_support.py
@@ -285,6 +287,7 @@ test/proxypylintutils.py
 test/pytest_execute.py
 test/resources/bad_file.py
 test/resources/yet_another_bad_file.py
+test/test_logging.py
 test/test_main.py
 test/test_one.py
 test/test_scanning_support.py
@@ -322,6 +325,7 @@ test/proxypylintutils.py
 test/pytest_execute.py
 test/resources/bad_file.py
 test/resources/yet_another_bad_file.py
+test/test_logging.py
 test/test_main.py
 test/test_one.py
 test/test_scanning_support.py"""
@@ -356,6 +360,7 @@ def test_dash_dash_list_files_and_test_path_with_existant_directory_path():
     expected_output = """test/__init__.py
 test/proxypylintutils.py
 test/pytest_execute.py
+test/test_logging.py
 test/test_main.py
 test/test_one.py
 test/test_scanning_support.py
@@ -393,6 +398,7 @@ def test_dash_dash_list_files_and_test_path_with_existant_directory_path_and_spe
     expected_output = """test/__init__.py
 test/proxypylintutils.py
 test/pytest_execute.py
+test/test_logging.py
 test/test_main.py
 test/test_one.py
 test/test_scanning_support.py
