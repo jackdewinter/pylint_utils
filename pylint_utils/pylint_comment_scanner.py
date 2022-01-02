@@ -3,6 +3,7 @@ Module to provide a scanner for PyLint suppression comments.
 """
 
 import json
+import sys
 
 
 class PyLintCommentScanner:
@@ -12,6 +13,7 @@ class PyLintCommentScanner:
 
     __pylint_suppression_prefix = "# pylint:"
     __pylint_suppression_disable = "disable="
+    __pylint_suppression_disable_next = "disable-next="
     __pylint_suppression_enable = "enable="
     __too_many_lines_item = "too-many-lines"
 
@@ -52,8 +54,8 @@ class PyLintCommentScanner:
 
             if not error_count:
                 self.__scan_map[next_file] = (disable_enabled_log, python_file_content)
-                if args.verbose_mode:
-                    print(f"  File contains {error_count} scan errors.")
+            if args.verbose_mode:
+                print(f"  File contains {error_count} scan errors.")
 
         return total_error_count
 
@@ -100,6 +102,18 @@ class PyLintCommentScanner:
                         collected_items,
                         disable_enabled_log,
                     )
+                elif pylint_directive.startswith(
+                    PyLintCommentScanner.__pylint_suppression_disable_next
+                ):
+                    self.__report_warning(
+                        line_count,
+                        f"Pylint suppression string '{PyLintCommentScanner.__pylint_suppression_disable_next}' is not supported.",
+                    )
+                else:
+                    self.__report_error(
+                        line_count,
+                        f"Pylint suppression '{pylint_directive}' is not understood.",
+                    )
             line_count += 1
         if active_items_map:
             for lowercase_next_item in active_items_map:
@@ -128,6 +142,9 @@ class PyLintCommentScanner:
     def __report_error(self, line_count, error_string):
         print(f"{self.__current_file_name}({line_count}): {error_string}")
         self.__errors_reported += 1
+
+    def __report_warning(self, line_count, warning_string):
+        print(f"{self.__current_file_name}({line_count}): {warning_string}")
 
     def __record_disabled_items(
         self, active_items_map, line_count, total_disable_counts, list_of_items
@@ -202,7 +219,12 @@ class PyLintCommentScanner:
         try:
             with open(args.report_file, "wt", encoding="utf-8") as outfile:
                 json.dump(entire_map, outfile, indent=4)
-        except IOError as ex:
+        except IOError as this_exception:
+            clean_this_exception = str(this_exception).replace("\\\\", "\\")
+            print(
+                f"Unable to write to report file '{args.report_file}':\n"
+                + f"  Error: {clean_this_exception}",
+                file=sys.stderr,
+            )
             return_code = 1
-            assert False, f"Test configuration file was not written ({ex})."
         return return_code

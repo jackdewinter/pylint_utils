@@ -217,16 +217,10 @@ class InProcessExecution(ABC):
         self,
         arguments=None,
         cwd=None,
-        disable_version_checking=False,
     ):
         """
         Invoke the mainline so that we can capture results.
         """
-        if disable_version_checking:
-            new_arguments = arguments.copy() if arguments else []
-            new_arguments.insert(0, "--disable-version")
-            arguments = new_arguments
-
         saved_state = SystemState()
 
         std_output = io.StringIO()

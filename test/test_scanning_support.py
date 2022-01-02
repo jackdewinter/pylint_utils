@@ -48,6 +48,17 @@ def test_dash_dash_list_files_and_test_path_and_recurse():
 test/proxypylintutils.py
 test/pytest_execute.py
 test/resources/bad_file.py
+test/resources/bad_suppression.py
+test/resources/balanced_file.py
+test/resources/balanced_file_disable_next.py
+test/resources/balanced_file_double_disable.py
+test/resources/balanced_file_no_suppression.py
+test/resources/balanced_file_with_too_many_lines.py
+test/resources/unbalanced_file_double_disable.py
+test/resources/unbalanced_file_double_enable.py
+test/resources/unbalanced_file_enable_without_disable.py
+test/resources/unbalanced_file_no_disable.py
+test/resources/unbalanced_file_no_enable.py
 test/resources/yet_another_bad_file.py
 test/test_logging.py
 test/test_main.py
@@ -77,6 +88,17 @@ def test_dash_dash_list_files_and_resources_path():
 
     expected_return_code = 0
     expected_output = """test/resources/bad_file.py
+test/resources/bad_suppression.py
+test/resources/balanced_file.py
+test/resources/balanced_file_disable_next.py
+test/resources/balanced_file_double_disable.py
+test/resources/balanced_file_no_suppression.py
+test/resources/balanced_file_with_too_many_lines.py
+test/resources/unbalanced_file_double_disable.py
+test/resources/unbalanced_file_double_enable.py
+test/resources/unbalanced_file_enable_without_disable.py
+test/resources/unbalanced_file_no_disable.py
+test/resources/unbalanced_file_no_enable.py
 test/resources/yet_another_bad_file.py"""
     expected_error = ""
 
@@ -102,6 +124,17 @@ def test_dash_dash_list_files_and_resources_path_with_star():
 
     expected_return_code = 0
     expected_output = """test/resources/bad_file.py
+test/resources/bad_suppression.py
+test/resources/balanced_file.py
+test/resources/balanced_file_disable_next.py
+test/resources/balanced_file_double_disable.py
+test/resources/balanced_file_no_suppression.py
+test/resources/balanced_file_with_too_many_lines.py
+test/resources/unbalanced_file_double_disable.py
+test/resources/unbalanced_file_double_enable.py
+test/resources/unbalanced_file_enable_without_disable.py
+test/resources/unbalanced_file_no_disable.py
+test/resources/unbalanced_file_no_enable.py
 test/resources/yet_another_bad_file.py"""
     expected_error = ""
 
@@ -125,7 +158,14 @@ def test_dash_dash_list_files_and_resources_path_with_b_star():
     supplied_arguments = ["--list-files", "test/resources/b*"]
 
     expected_return_code = 0
-    expected_output = """test/resources/bad_file.py"""
+    expected_output = """test/resources/bad_file.py
+test/resources/bad_suppression.py
+test/resources/balanced_file.py
+test/resources/balanced_file_disable_next.py
+test/resources/balanced_file_double_disable.py
+test/resources/balanced_file_no_suppression.py
+test/resources/balanced_file_with_too_many_lines.py
+"""
     expected_error = ""
 
     # Act
@@ -286,6 +326,17 @@ def test_dash_dash_list_files_and_test_path_with_non_existant_ignore_path():
 test/proxypylintutils.py
 test/pytest_execute.py
 test/resources/bad_file.py
+test/resources/bad_suppression.py
+test/resources/balanced_file.py
+test/resources/balanced_file_disable_next.py
+test/resources/balanced_file_double_disable.py
+test/resources/balanced_file_no_suppression.py
+test/resources/balanced_file_with_too_many_lines.py
+test/resources/unbalanced_file_double_disable.py
+test/resources/unbalanced_file_double_enable.py
+test/resources/unbalanced_file_enable_without_disable.py
+test/resources/unbalanced_file_no_disable.py
+test/resources/unbalanced_file_no_enable.py
 test/resources/yet_another_bad_file.py
 test/test_logging.py
 test/test_main.py
@@ -324,6 +375,17 @@ def test_dash_dash_list_files_and_test_path_with_existant_and_specific_ignore_pa
 test/proxypylintutils.py
 test/pytest_execute.py
 test/resources/bad_file.py
+test/resources/bad_suppression.py
+test/resources/balanced_file.py
+test/resources/balanced_file_disable_next.py
+test/resources/balanced_file_double_disable.py
+test/resources/balanced_file_no_suppression.py
+test/resources/balanced_file_with_too_many_lines.py
+test/resources/unbalanced_file_double_disable.py
+test/resources/unbalanced_file_double_enable.py
+test/resources/unbalanced_file_enable_without_disable.py
+test/resources/unbalanced_file_no_disable.py
+test/resources/unbalanced_file_no_enable.py
 test/resources/yet_another_bad_file.py
 test/test_logging.py
 test/test_main.py

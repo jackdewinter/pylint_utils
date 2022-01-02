@@ -21,7 +21,6 @@ def write_temporary_configuration(supplied_configuration):
         assert False, f"Test configuration file was not written ({ex})."
 
 
-@staticmethod
 def make_string_visible(expected_string):
     """
     Simple function to make a string visible.

@@ -2,8 +2,10 @@
 setlocal EnableDelayedExpansion
 pushd %~dp0
 
+
 rem Set needed environment variables.
 set CLEAN_TEMPFILE=temp_clean.txt
+set CLEAN_TEMPFILE2=temp_clean2.txt
 set PYTHON_MODULE_NAME=pylint_utils
 set "PROJECT_DIRECTORY=%cd%"
 set PYTHONPATH=%PROJECT_DIRECTORY%
@@ -92,8 +94,9 @@ if ERRORLEVEL 1 (
 )	
 
 git diff --name-only --staged > %CLEAN_TEMPFILE%
+findstr /V /R "^test/resources" %CLEAN_TEMPFILE% > %CLEAN_TEMPFILE2%
 set ALL_FILES=
-for /f "tokens=*" %%x in (%CLEAN_TEMPFILE%) do (
+for /f "tokens=*" %%x in (%CLEAN_TEMPFILE2%) do (
 	set TEST_FILE=%%x
 	if /i [!TEST_FILE:~-3!]==[.py] set ALL_FILES=!ALL_FILES! !TEST_FILE!
 )
@@ -148,6 +151,8 @@ echo {Analysis of project failed.}
 
 :real_end
 erase /f /q %CLEAN_TEMPFILE% > nul 2>&1
+erase /f /q %CLEAN_TEMPFILE2% > nul 2>&1
 set CLEAN_TEMPFILE=
+set CLEAN_TEMPFILE2=
 popd
 exit /B %PC_EXIT_CODE%
