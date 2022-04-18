@@ -139,16 +139,21 @@ def test_dash_dash_list_files():
     expected_output = """test/resources/bad_file.py
 test/resources/bad_suppression.py
 test/resources/balanced_file.py
+test/resources/balanced_file_clean.py
+test/resources/balanced_file_clean_with_extra_first.py
+test/resources/balanced_file_clean_with_extra_last.py
 test/resources/balanced_file_disable_next.py
 test/resources/balanced_file_double_disable.py
 test/resources/balanced_file_no_suppression.py
 test/resources/balanced_file_with_too_many_lines.py
+test/resources/clean_file.py
 test/resources/unbalanced_file_double_disable.py
 test/resources/unbalanced_file_double_enable.py
 test/resources/unbalanced_file_enable_without_disable.py
 test/resources/unbalanced_file_no_disable.py
 test/resources/unbalanced_file_no_enable.py
-test/resources/yet_another_bad_file.py"""
+test/resources/yet_another_bad_file.py
+test/resources/yet_another_bad_file_with_bad_end.py"""
     expected_error = ""
 
     # Act

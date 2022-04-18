@@ -1,7 +1,12 @@
 """
 Module to provide tests related to scanning for files to analyze.
 """
+import argparse
+import io
 from test.proxypylintutils import ProxyPyLintUtils
+from test.pytest_execute import InProcessResult
+
+from pylint_utils.file_scanner import FileScanner
 
 
 def test_dash_dash_list_files_and_test_path():
@@ -17,9 +22,9 @@ def test_dash_dash_list_files_and_test_path():
     expected_output = """test/__init__.py
 test/proxypylintutils.py
 test/pytest_execute.py
+test/test_detect_unused.py
 test/test_logging.py
 test/test_main.py
-test/test_one.py
 test/test_scanning_support.py
 test/utils.py"""
     expected_error = ""
@@ -50,19 +55,24 @@ test/pytest_execute.py
 test/resources/bad_file.py
 test/resources/bad_suppression.py
 test/resources/balanced_file.py
+test/resources/balanced_file_clean.py
+test/resources/balanced_file_clean_with_extra_first.py
+test/resources/balanced_file_clean_with_extra_last.py
 test/resources/balanced_file_disable_next.py
 test/resources/balanced_file_double_disable.py
 test/resources/balanced_file_no_suppression.py
 test/resources/balanced_file_with_too_many_lines.py
+test/resources/clean_file.py
 test/resources/unbalanced_file_double_disable.py
 test/resources/unbalanced_file_double_enable.py
 test/resources/unbalanced_file_enable_without_disable.py
 test/resources/unbalanced_file_no_disable.py
 test/resources/unbalanced_file_no_enable.py
 test/resources/yet_another_bad_file.py
+test/resources/yet_another_bad_file_with_bad_end.py
+test/test_detect_unused.py
 test/test_logging.py
 test/test_main.py
-test/test_one.py
 test/test_scanning_support.py
 test/utils.py"""
     expected_error = ""
@@ -90,16 +100,21 @@ def test_dash_dash_list_files_and_resources_path():
     expected_output = """test/resources/bad_file.py
 test/resources/bad_suppression.py
 test/resources/balanced_file.py
+test/resources/balanced_file_clean.py
+test/resources/balanced_file_clean_with_extra_first.py
+test/resources/balanced_file_clean_with_extra_last.py
 test/resources/balanced_file_disable_next.py
 test/resources/balanced_file_double_disable.py
 test/resources/balanced_file_no_suppression.py
 test/resources/balanced_file_with_too_many_lines.py
+test/resources/clean_file.py
 test/resources/unbalanced_file_double_disable.py
 test/resources/unbalanced_file_double_enable.py
 test/resources/unbalanced_file_enable_without_disable.py
 test/resources/unbalanced_file_no_disable.py
 test/resources/unbalanced_file_no_enable.py
-test/resources/yet_another_bad_file.py"""
+test/resources/yet_another_bad_file.py
+test/resources/yet_another_bad_file_with_bad_end.py"""
     expected_error = ""
 
     # Act
@@ -126,16 +141,21 @@ def test_dash_dash_list_files_and_resources_path_with_star():
     expected_output = """test/resources/bad_file.py
 test/resources/bad_suppression.py
 test/resources/balanced_file.py
+test/resources/balanced_file_clean.py
+test/resources/balanced_file_clean_with_extra_first.py
+test/resources/balanced_file_clean_with_extra_last.py
 test/resources/balanced_file_disable_next.py
 test/resources/balanced_file_double_disable.py
 test/resources/balanced_file_no_suppression.py
 test/resources/balanced_file_with_too_many_lines.py
+test/resources/clean_file.py
 test/resources/unbalanced_file_double_disable.py
 test/resources/unbalanced_file_double_enable.py
 test/resources/unbalanced_file_enable_without_disable.py
 test/resources/unbalanced_file_no_disable.py
 test/resources/unbalanced_file_no_enable.py
-test/resources/yet_another_bad_file.py"""
+test/resources/yet_another_bad_file.py
+test/resources/yet_another_bad_file_with_bad_end.py"""
     expected_error = ""
 
     # Act
@@ -161,6 +181,9 @@ def test_dash_dash_list_files_and_resources_path_with_b_star():
     expected_output = """test/resources/bad_file.py
 test/resources/bad_suppression.py
 test/resources/balanced_file.py
+test/resources/balanced_file_clean.py
+test/resources/balanced_file_clean_with_extra_first.py
+test/resources/balanced_file_clean_with_extra_last.py
 test/resources/balanced_file_disable_next.py
 test/resources/balanced_file_double_disable.py
 test/resources/balanced_file_no_suppression.py
@@ -328,19 +351,24 @@ test/pytest_execute.py
 test/resources/bad_file.py
 test/resources/bad_suppression.py
 test/resources/balanced_file.py
+test/resources/balanced_file_clean.py
+test/resources/balanced_file_clean_with_extra_first.py
+test/resources/balanced_file_clean_with_extra_last.py
 test/resources/balanced_file_disable_next.py
 test/resources/balanced_file_double_disable.py
 test/resources/balanced_file_no_suppression.py
 test/resources/balanced_file_with_too_many_lines.py
+test/resources/clean_file.py
 test/resources/unbalanced_file_double_disable.py
 test/resources/unbalanced_file_double_enable.py
 test/resources/unbalanced_file_enable_without_disable.py
 test/resources/unbalanced_file_no_disable.py
 test/resources/unbalanced_file_no_enable.py
 test/resources/yet_another_bad_file.py
+test/resources/yet_another_bad_file_with_bad_end.py
+test/test_detect_unused.py
 test/test_logging.py
 test/test_main.py
-test/test_one.py
 test/test_scanning_support.py
 test/utils.py"""
     expected_error = ""
@@ -377,19 +405,24 @@ test/pytest_execute.py
 test/resources/bad_file.py
 test/resources/bad_suppression.py
 test/resources/balanced_file.py
+test/resources/balanced_file_clean.py
+test/resources/balanced_file_clean_with_extra_first.py
+test/resources/balanced_file_clean_with_extra_last.py
 test/resources/balanced_file_disable_next.py
 test/resources/balanced_file_double_disable.py
 test/resources/balanced_file_no_suppression.py
 test/resources/balanced_file_with_too_many_lines.py
+test/resources/clean_file.py
 test/resources/unbalanced_file_double_disable.py
 test/resources/unbalanced_file_double_enable.py
 test/resources/unbalanced_file_enable_without_disable.py
 test/resources/unbalanced_file_no_disable.py
 test/resources/unbalanced_file_no_enable.py
 test/resources/yet_another_bad_file.py
+test/resources/yet_another_bad_file_with_bad_end.py
+test/test_detect_unused.py
 test/test_logging.py
 test/test_main.py
-test/test_one.py
 test/test_scanning_support.py"""
     expected_error = ""
 
@@ -422,9 +455,9 @@ def test_dash_dash_list_files_and_test_path_with_existant_directory_path():
     expected_output = """test/__init__.py
 test/proxypylintutils.py
 test/pytest_execute.py
+test/test_detect_unused.py
 test/test_logging.py
 test/test_main.py
-test/test_one.py
 test/test_scanning_support.py
 test/utils.py"""
     expected_error = ""
@@ -460,9 +493,9 @@ def test_dash_dash_list_files_and_test_path_with_existant_directory_path_and_spe
     expected_output = """test/__init__.py
 test/proxypylintutils.py
 test/pytest_execute.py
+test/test_detect_unused.py
 test/test_logging.py
 test/test_main.py
-test/test_one.py
 test/test_scanning_support.py
 test/utils.py"""
     expected_error = ""
@@ -474,3 +507,35 @@ test/utils.py"""
     execute_results.assert_results(
         expected_output, expected_error, expected_return_code
     )
+
+
+def test_with_no_list_files():
+    """
+    Lower level test to make sure that add_standard_arguments can be called without listing files.
+    NOTE: This is explicitly for the file_scanner.py module coverage
+    """
+
+    # Arrange
+    parser = argparse.ArgumentParser(description="Test for no list files argument.")
+    print_help_stream = io.StringIO()
+    expected_output = """usage: -c [-h] [--recurse] [--ignore-path IGNORE_PATH] path [path ...]
+
+Test for no list files argument.
+
+positional arguments:
+  path                  One or more paths to scan for eligible files
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --recurse             recursively scan directories
+  --ignore-path IGNORE_PATH
+                        one or more paths to ignore
+"""
+
+    # Act
+    FileScanner.add_standard_arguments(parser, False)
+    parser.print_help(print_help_stream)
+    execute_result = InProcessResult(0, print_help_stream, None)
+
+    # Assert
+    execute_result.assert_results(stdout=expected_output)

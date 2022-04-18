@@ -107,7 +107,8 @@ class PyLintCommentScanner:
                 ):
                     self.__report_warning(
                         line_count,
-                        f"Pylint suppression string '{PyLintCommentScanner.__pylint_suppression_disable_next}' is not supported.",
+                        "Pylint suppression string "
+                        + f"'{PyLintCommentScanner.__pylint_suppression_disable_next}' is not supported.",
                     )
                 else:
                     self.__report_error(

@@ -3,6 +3,14 @@
     "reportSource": "pytest",
     "measurements": [
         {
+            "name": "test.test_detect_unused",
+            "totalTests": 16,
+            "failedTests": 0,
+            "errorTests": 0,
+            "skippedTests": 0,
+            "elapsedTimeInMilliseconds": 0
+        },
+        {
             "name": "test.test_logging",
             "totalTests": 4,
             "failedTests": 0,
@@ -19,16 +27,8 @@
             "elapsedTimeInMilliseconds": 0
         },
         {
-            "name": "test.test_one",
-            "totalTests": 1,
-            "failedTests": 0,
-            "errorTests": 0,
-            "skippedTests": 0,
-            "elapsedTimeInMilliseconds": 0
-        },
-        {
             "name": "test.test_scanning_support",
-            "totalTests": 14,
+            "totalTests": 15,
             "failedTests": 0,
             "errorTests": 0,
             "skippedTests": 0,
