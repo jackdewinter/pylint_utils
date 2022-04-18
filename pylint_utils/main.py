@@ -165,6 +165,7 @@ class PyLintUtils:
                 poll_return_code = process.poll()
 
             found_suppressions = []
+            was_any_fatal = False
             for line in process.stdout:
                 # print("out:" + line + ":")
 
@@ -174,10 +175,18 @@ class PyLintUtils:
 
                 # modify the file name thats output to reverse the path traversal we made
                 parts = line.split(":")
+                if not was_any_fatal:
+                    was_any_fatal = (
+                        parts[0].lower() == "fatal" or parts[1].lower() == "fatal"
+                    )
                 found_suppressions.append(parts)
 
-            # for line in process.stderr:
-            #     print("err:" + line + ":")
+            if was_any_fatal:
+                print("Pylint returned a fatal error:")
+                for line in process.stdout:
+                    print("out:" + line + ":")
+                for line in process.stderr:
+                    print("err:" + line + ":")
             return_code = process.returncode
 
         return return_code, found_suppressions
