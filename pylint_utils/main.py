@@ -171,7 +171,7 @@ class PyLintUtils:
                 found_suppressions = []
                 was_any_fatal = False
                 for line in process.stdout:
-                    print("out:" + line + ":")
+                    # print("out:" + line + ":")
 
                     # Remove pylintrc warning
                     if line.startswith("No config file found") or line.startswith("*"):
@@ -185,20 +185,20 @@ class PyLintUtils:
                         )
                     found_suppressions.append(parts)
 
-                if was_any_fatal:
-                    print(f"Pylint returned a fatal error:{process.returncode}")
-                else:
-                    print(f"Pylint returned normal:{process.returncode}:{cmd}")
-                for line in process.stdout:
-                    print("out:" + line + ":")
-                for line in process.stderr:
-                    print("err:" + line + ":")
+                # if was_any_fatal:
+                #     print(f"Pylint returned a fatal error:{process.returncode}")
+                # else:
+                #     print(f"Pylint returned normal:{process.returncode}:{cmd}")
+                # for line in process.stdout:
+                #     print("out:" + line + ":")
+                # for line in process.stderr:
+                #     print("err:" + line + ":")
                 return_code = process.returncode
         except Exception as exception:
             print(f"Pylint returned exception:{exception}")
-        print(f"cmd:{cmd}:")
-        print(f"return_code:{return_code}:")
-        print(f"found_suppressions:{found_suppressions}:")
+        # print(f"cmd:{cmd}:")
+        # print(f"return_code:{return_code}:")
+        # print(f"found_suppressions:{found_suppressions}:")
         return return_code, found_suppressions
 
     @classmethod
