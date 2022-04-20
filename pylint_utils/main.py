@@ -150,45 +150,49 @@ class PyLintUtils:
 
     def __quack(self, cmd, parent_path):
         return_code = -1
-        with subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            cwd=parent_path,
-            env=self._get_env(),
-            universal_newlines=True,
-        ) as process:
+        try:
+            with subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=parent_path,
+                env=self._get_env(),
+                universal_newlines=True,
+            ) as process:
 
-            poll_return_code = process.poll()
-            while poll_return_code is None:
-                time.sleep(0.1)
                 poll_return_code = process.poll()
+                while poll_return_code is None:
+                    time.sleep(0.1)
+                    poll_return_code = process.poll()
 
-            found_suppressions = []
-            was_any_fatal = False
-            for line in process.stdout:
-                # print("out:" + line + ":")
+                found_suppressions = []
+                was_any_fatal = False
+                for line in process.stdout:
+                    # print("out:" + line + ":")
 
-                # Remove pylintrc warning
-                if line.startswith("No config file found") or line.startswith("*"):
-                    continue
+                    # Remove pylintrc warning
+                    if line.startswith("No config file found") or line.startswith("*"):
+                        continue
 
-                # modify the file name thats output to reverse the path traversal we made
-                parts = line.split(":")
-                if not was_any_fatal:
-                    was_any_fatal = (
-                        parts[0].lower() == "fatal" or parts[1].lower() == "fatal"
-                    )
-                found_suppressions.append(parts)
+                    # modify the file name thats output to reverse the path traversal we made
+                    parts = line.split(":")
+                    if not was_any_fatal:
+                        was_any_fatal = (
+                            parts[0].lower() == "fatal" or parts[1].lower() == "fatal"
+                        )
+                    found_suppressions.append(parts)
 
-            if was_any_fatal:
-                print("Pylint returned a fatal error:")
+                if was_any_fatal:
+                    print(f"Pylint returned a fatal error:{process.returncode}")
+                else:
+                    print(f"Pylint returned normal:{process.returncode}")
                 for line in process.stdout:
                     print("out:" + line + ":")
                 for line in process.stderr:
                     print("err:" + line + ":")
-            return_code = process.returncode
-
+                return_code = process.returncode
+        except Exception as exception:
+            print(f"Pylint returned exception:{exception}")
         return return_code, found_suppressions
 
     @classmethod
