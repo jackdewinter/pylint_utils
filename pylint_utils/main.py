@@ -151,7 +151,6 @@ class PyLintUtils:
     def __quack(self, cmd, parent_path):
         return_code = -1
         try:
-            print(f"cmd:{str(cmd)}:")
             with subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
@@ -194,6 +193,9 @@ class PyLintUtils:
                 return_code = process.returncode
         except Exception as exception:
             print(f"Pylint returned exception:{exception}")
+        print(f"cmd:{cmd}:")
+        print(f"return_code:{return_code}:")
+        print(f"found_suppressions:{found_suppressions}:")
         return return_code, found_suppressions
 
     @classmethod
