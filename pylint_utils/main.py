@@ -168,7 +168,7 @@ class PyLintUtils:
                 found_suppressions = []
                 was_any_fatal = False
                 for line in process.stdout:
-                    # print("out:" + line + ":")
+                    print("out:" + line + ":")
 
                     # Remove pylintrc warning
                     if line.startswith("No config file found") or line.startswith("*"):
