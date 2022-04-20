@@ -151,6 +151,7 @@ class PyLintUtils:
     def __quack(self, cmd, parent_path):
         return_code = -1
         try:
+            print(f"cmd:{str(cmd)}:")
             with subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
