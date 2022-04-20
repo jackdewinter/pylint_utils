@@ -123,7 +123,10 @@ class PyLintUtils:
         # xx = filename.rindex("/")
         # print("xx-->" + str(xx))
         # if xx == -1 or True:
-        child_path = filename.replace("/", "\\")
+        if sys.platform.startswith("win"):
+            child_path = filename.replace("/", "\\")
+        else:
+            child_path = filename
         parent_path = "."
         # else:
         #     child_path = filename[xx + 1 :]
