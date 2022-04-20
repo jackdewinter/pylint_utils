@@ -151,6 +151,7 @@ class PyLintUtils:
         ] + list(options)
         return self.__quack(cmd, parent_path)
 
+    # pylint: disable=broad-except
     def __quack(self, cmd, parent_path):
         return_code = -1
         try:
@@ -200,6 +201,8 @@ class PyLintUtils:
         # print(f"return_code:{return_code}:")
         # print(f"found_suppressions:{found_suppressions}:")
         return return_code, found_suppressions
+
+    # pylint: enable=broad-except
 
     @classmethod
     def __remove_pylint_suppress_lines(cls, content_lines, start_line, end_line):
