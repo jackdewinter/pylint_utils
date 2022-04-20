@@ -185,7 +185,7 @@ class PyLintUtils:
                 if was_any_fatal:
                     print(f"Pylint returned a fatal error:{process.returncode}")
                 else:
-                    print(f"Pylint returned normal:{process.returncode}")
+                    print(f"Pylint returned normal:{process.returncode}:{cmd}")
                 for line in process.stdout:
                     print("out:" + line + ":")
                 for line in process.stderr:
