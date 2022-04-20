@@ -4,6 +4,7 @@
         "pylint_utils/__main__.py": {},
         "pylint_utils/file_scanner.py": {},
         "pylint_utils/main.py": {
+            "broad-except": 1,
             "too-many-arguments": 1,
             "too-many-locals": 1
         },
@@ -12,6 +13,7 @@
         "pylint_utils/version.py": {}
     },
     "disables-by-name": {
+        "broad-except": 1,
         "too-many-arguments": 1,
         "too-many-locals": 1
     }

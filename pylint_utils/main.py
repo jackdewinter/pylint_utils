@@ -2,7 +2,9 @@
 Module to ...
 """
 
+
 import argparse
+import contextlib
 import logging
 import os
 import os.path as osp
@@ -28,7 +30,7 @@ class PyLintUtils:
     def __init__(self):
         self.__version_number = PyLintUtils.__get_semantic_version()
         self.__verbose_mode = None
-        self.__is_being_piped = None
+        self.__display_progress = None
 
     @staticmethod
     def __get_semantic_version():
@@ -36,7 +38,7 @@ class PyLintUtils:
         assert os.path.isabs(file_path)
         file_path = file_path.replace(os.sep, "/")
         last_index = file_path.rindex("/")
-        file_path = file_path[: last_index + 1] + "version.py"
+        file_path = f"{file_path[: last_index + 1]}version.py"
         version_meta = runpy.run_path(file_path)
         return version_meta["__version__"]
 
@@ -57,6 +59,13 @@ class PyLintUtils:
 
         SimpleLogging.add_standard_arguments(parser, PyLintUtils.__default_log_level)
 
+        parser.add_argument(
+            "--x-display",
+            dest="x_test_display",
+            action="store_true",
+            default="",
+            help=argparse.SUPPRESS,
+        )
         parser.add_argument(
             "--config",
             dest="config_file",
@@ -114,7 +123,10 @@ class PyLintUtils:
         # xx = filename.rindex("/")
         # print("xx-->" + str(xx))
         # if xx == -1 or True:
-        child_path = filename.replace("/", "\\")
+        if sys.platform.startswith("win"):
+            child_path = filename.replace("/", "\\")
+        else:
+            child_path = filename
         parent_path = "."
         # else:
         #     child_path = filename[xx + 1 :]
@@ -139,35 +151,58 @@ class PyLintUtils:
         ] + list(options)
         return self.__quack(cmd, parent_path)
 
+    # pylint: disable=broad-except
     def __quack(self, cmd, parent_path):
         return_code = -1
-        with subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            cwd=parent_path,
-            env=self._get_env(),
-            universal_newlines=True,
-        ) as process:
+        try:
+            with subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=parent_path,
+                env=self._get_env(),
+                universal_newlines=True,
+            ) as process:
 
-            poll_return_code = process.poll()
-            while poll_return_code is None:
-                time.sleep(0.1)
                 poll_return_code = process.poll()
+                while poll_return_code is None:
+                    time.sleep(0.1)
+                    poll_return_code = process.poll()
 
-            found_suppressions = []
-            for line in process.stdout:
+                found_suppressions = []
+                was_any_fatal = False
+                for line in process.stdout:
+                    # print("out:" + line + ":")
 
-                # Remove pylintrc warning
-                if line.startswith("No config file found") or line.startswith("*"):
-                    continue
+                    # Remove pylintrc warning
+                    if line.startswith("No config file found") or line.startswith("*"):
+                        continue
 
-                # modify the file name thats output to reverse the path traversal we made
-                parts = line.split(":")
-                found_suppressions.append(parts)
-            return_code = process.returncode
+                    # modify the file name thats output to reverse the path traversal we made
+                    parts = line.split(":")
+                    if not was_any_fatal:
+                        was_any_fatal = (
+                            parts[0].lower() == "fatal" or parts[1].lower() == "fatal"
+                        )
+                    found_suppressions.append(parts)
 
+                # if was_any_fatal:
+                #     print(f"Pylint returned a fatal error:{process.returncode}")
+                # else:
+                #     print(f"Pylint returned normal:{process.returncode}:{cmd}")
+                # for line in process.stdout:
+                #     print("out:" + line + ":")
+                # for line in process.stderr:
+                #     print("err:" + line + ":")
+                return_code = process.returncode
+        except Exception as exception:
+            print(f"Pylint returned exception:{exception}")
+        # print(f"cmd:{cmd}:")
+        # print(f"return_code:{return_code}:")
+        # print(f"found_suppressions:{found_suppressions}:")
         return return_code, found_suppressions
+
+    # pylint: enable=broad-except
 
     @classmethod
     def __remove_pylint_suppress_lines(cls, content_lines, start_line, end_line):
@@ -285,23 +320,23 @@ class PyLintUtils:
 
         if self.__verbose_mode:
             print(
-                f"  Verifying suppression '{logged_properties[2]}' from file {next_file}, line {logged_properties[0]-1}"
+                f"  Verifying suppression '{logged_properties[2]}' from file {next_file}, line {logged_properties[0]}"
             )
 
     def __emit_dot_tracker_header(self, disable_enabled_log):
 
-        if not self.__is_being_piped and not self.__verbose_mode:
+        if self.__display_progress:
             suppression_count = len(disable_enabled_log)
             print("  ", end="")
             print("".rjust(suppression_count, "."), end="")
             print("".rjust(suppression_count, "\b"), end="", flush=True)
 
     def __emit_dot_tracker_item(self, did_match):
-        if not self.__is_being_piped and not self.__verbose_mode:
+        if self.__display_progress:
             print("v" if did_match else "U", end="", flush=True)
 
     def __emit_dot_tracker_footer(self, unused_suppression_tuples):
-        if not self.__is_being_piped and not self.__verbose_mode:
+        if self.__display_progress:
             print(
                 f" - {len(unused_suppression_tuples)} Found"
                 if unused_suppression_tuples
@@ -323,7 +358,7 @@ class PyLintUtils:
         last_slash_index = next_file.rfind("/")
         assert last_slash_index != -1
         new_file_name = (
-            next_file[:last_slash_index] + "/__" + next_file[last_slash_index + 1 :]
+            f"{next_file[:last_slash_index]}/__{next_file[last_slash_index + 1 :]}"
         )
 
         self.__emit_dot_tracker_header(disable_enabled_log)
@@ -348,7 +383,7 @@ class PyLintUtils:
                     content_lines, logged_properties, next_file, new_file_name, options
                 )
             if modified_scan_return_code:
-                if not self.__is_being_piped and not self.__verbose_mode:
+                if self.__display_progress:
                     print("")
                 return 1, None
 
@@ -369,7 +404,7 @@ class PyLintUtils:
         self.__emit_dot_tracker_footer(unused_suppression_tuples)
         return 0, sorted(
             unused_suppression_tuples,
-            key=lambda x: x[0] + ":" + str(x[1]).rjust(7, "0"),
+            key=lambda x: f"{x[0]}:" + str(x[1]).rjust(7, "0"),
         )
 
     # pylint: enable=too-many-locals
@@ -404,7 +439,7 @@ class PyLintUtils:
                 f"\n{len(all_unused_suppression_tuples)} unused PyLint suppressions found."
             )
             for i in all_unused_suppression_tuples:
-                print(f"{i[0]}:{i[1]}: Unused suppression: {i[2]}")
+                print(f"{i[0]}:{i[1]+1}: Unused suppression: {i[2]}")
             return_code = 2
         else:
             print("\nNo unused PyLint suppressions found.")
@@ -412,12 +447,11 @@ class PyLintUtils:
 
     def __process_files_to_scan(self, args, files_to_scan):
         return_code = 0
-        try:
+        with contextlib.suppress(KeyboardInterrupt):
             pylint_scanner = PyLintCommentScanner()
-            total_error_count = pylint_scanner.analyze_python_files_for_pylint_comments(
+            if total_error_count := pylint_scanner.analyze_python_files_for_pylint_comments(
                 args, files_to_scan
-            )
-            if total_error_count:
+            ):
                 print(
                     f"\nScanned python files contained {total_error_count} PyLint suppression error(s)."
                 )
@@ -426,8 +460,6 @@ class PyLintUtils:
                 return_code = pylint_scanner.create_report(args)
             elif args.scan_suppressions:
                 return_code = self.__verify_pylint_suppressions(args, pylint_scanner)
-        except KeyboardInterrupt:
-            pass
         return return_code
 
     def main(self):
@@ -436,7 +468,9 @@ class PyLintUtils:
         """
         args = self.__parse_arguments()
         self.__verbose_mode = args.verbose_mode
-        self.__is_being_piped = not sys.stdout.isatty()
+        self.__display_progress = (
+            sys.stdout.isatty() or args.x_test_display
+        ) and not self.__verbose_mode
 
         return_code = 0
         try:

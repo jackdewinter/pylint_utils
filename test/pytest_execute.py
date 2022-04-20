@@ -101,11 +101,12 @@ class InProcessResult:
 
         try:
             if stdout:
+                extra_value = self.__std_err.getvalue() if self.__std_err else None
                 self.compare_versus_expected(
                     "Stdout",
                     self.__std_out,
                     stdout,
-                    log_extra=self.__std_err.getvalue(),
+                    log_extra=extra_value,
                 )
             else:
                 assert_text = (
@@ -120,17 +121,22 @@ class InProcessResult:
                     "Stderr", self.__std_err, stderr, additional_error
                 )
             else:
+                error_message = (
+                    "None" if not self.__std_err else self.__std_err.getvalue()
+                )
                 assert (
-                    not self.__std_err.getvalue()
-                ), f"Expected stderr to be empty, not: {self.__std_err.getvalue()}"
+                    not self.__std_err or not self.__std_err.getvalue()
+                ), f"Expected stderr to be empty, not: {error_message}"
 
             assert (
                 self.__return_code == error_code
             ), f"Actual error code ({self.__return_code}) and expected error code ({error_code}) differ."
 
         finally:
-            self.__std_out.close()
-            self.__std_err.close()
+            if self.__std_out:
+                self.__std_out.close()
+            if self.__std_err:
+                self.__std_err.close()
 
 
 # pylint: disable=too-few-public-methods

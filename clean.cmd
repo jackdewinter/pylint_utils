@@ -46,7 +46,7 @@ echo {Analysis of project started.}
 rem Cleanly start the main part of the script
 
 echo {Executing black formatter on Python code.}
-pipenv run black %MY_VERBOSE% .
+pipenv run black %MY_VERBOSE% --exclude="test/resources" .
 if ERRORLEVEL 1 (
 	echo.
 	echo {Executing black formatter on Python code failed.}
@@ -62,7 +62,7 @@ if ERRORLEVEL 1 (
 )
 
 echo {Executing flake8 static analyzer on Python code.}
-pipenv run flake8 -j 4 --exclude dist,build %MY_VERBOSE%
+pipenv run flake8 -j 4 --exclude dist,build,test/resources %MY_VERBOSE%
 if ERRORLEVEL 1 (
 	echo.
 	echo {Executing static analyzer on Python code failed.}
@@ -98,7 +98,9 @@ findstr /V /R "^test/resources" %CLEAN_TEMPFILE% > %CLEAN_TEMPFILE2%
 set ALL_FILES=
 for /f "tokens=*" %%x in (%CLEAN_TEMPFILE2%) do (
 	set TEST_FILE=%%x
-	if /i [!TEST_FILE:~-3!]==[.py] set ALL_FILES=!ALL_FILES! !TEST_FILE!
+	if exist "!TEST_FILE!" (
+		if /i [!TEST_FILE:~-3!]==[.py] set ALL_FILES=!ALL_FILES! !TEST_FILE!
+	)
 )
 if "%ALL_FILES%" == "" (
 	echo {Not executing pylint suppression checker on Python source code. No eligible Python files staged.}
