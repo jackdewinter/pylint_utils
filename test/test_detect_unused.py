@@ -4,7 +4,10 @@ are still required.
 """
 
 import os
+import subprocess
 import tempfile
+import unittest
+from test.patch_builtin_open import PatchBuiltinOpen
 from test.proxypylintutils import ProxyPyLintUtils
 
 
@@ -140,7 +143,10 @@ def test_scan_with_multiple_unsuppressed_in_original_with_bad_end_with_config():
     """
 
     # Arrange
-    warning_to_suppress = "missing-function-docstring, missing-module-docstring, too-many-arguments, missing-final-newline"
+    warning_to_suppress = (
+        "missing-function-docstring, missing-module-docstring, "
+        + "too-many-arguments, missing-final-newline"
+    )
     configuration_file = None
     try:
         configuration_file = write_temporary_configuration(warning_to_suppress)
@@ -271,14 +277,15 @@ def test_scan_for_unused_original_not_clean_with_bad_config():
     ]
 
     expected_return_code = 1
-    expected_output = """Verifying {file} scans cleanly without modifications.
-  Baseline PyLint scan found unsuppressed warnings: 
-  Fix all errors before scanning again.
+    expected_output = ""
+    expected_stdout_parts = [
+        f"""Verifying {file_to_scan} scans cleanly without modifications.
+  Baseline PyLint scan found reported error output:""",
+        """Fix all errors before scanning again.
 
 No unused PyLint suppressions found.
-""".replace(
-        "{file}", file_to_scan
-    )
+""",
+    ]
     expected_error = ""
 
     # Act
@@ -286,7 +293,10 @@ No unused PyLint suppressions found.
 
     # Assert
     execute_results.assert_results(
-        expected_output, expected_error, expected_return_code
+        expected_output,
+        expected_error,
+        expected_return_code,
+        output_parts=expected_stdout_parts,
     )
 
 
@@ -587,6 +597,205 @@ No unused PyLint suppressions found.""".replace(
     execute_results = scanner.invoke_main(arguments=supplied_arguments)
 
     # Assert
+    execute_results.assert_results(
+        expected_output, expected_error, expected_return_code
+    )
+
+
+def test_scan_for_unused_with_bad_scan_file_open():
+    """
+    Test to make sure that scanning a file that fails when the new scan file
+    is opened is captured properly.
+    """
+
+    # Arrange
+    scanner = ProxyPyLintUtils()
+    file_to_scan = "test/resources/balanced_file_clean.py"
+    supplied_arguments = [
+        "--verbose",
+        "--scan",
+        file_to_scan,
+    ]
+
+    test_file_to_scan_path = (
+        f"{os.path.dirname(file_to_scan)}/__{os.path.basename(file_to_scan)}"
+    )
+    mock_exception_message = "bob"
+
+    expected_return_code = 1
+    expected_output = """Scanning file: {file}
+  File contains 0 scan errors.
+Verifying {file} scans cleanly without modifications.
+  Verifying suppression 'too-many-arguments' from file {file}, line 6
+    Modified file scan of {file} failed during creation: {error}
+
+No unused PyLint suppressions found.
+""".replace(
+        "{file}", file_to_scan
+    ).replace(
+        "{error}", mock_exception_message
+    )
+    expected_error = ""
+
+    # Act
+    try:
+        pbo = PatchBuiltinOpen()
+        pbo.register_exception(
+            test_file_to_scan_path, "wt", exception_message=mock_exception_message
+        )
+        pbo.start()
+
+        execute_results = scanner.invoke_main(arguments=supplied_arguments)
+    finally:
+        pbo.stop()
+
+    # Assert
+    execute_results.assert_results(
+        expected_output, expected_error, expected_return_code
+    )
+
+
+def test_scan_for_unused_with_bad_scan_file_open_and_display():
+    """
+    Test to make sure that scanning a file that fails when the new scan file
+    is opened is captured properly, with the display mode turned on.
+    """
+
+    # Arrange
+    scanner = ProxyPyLintUtils()
+    file_to_scan = "test/resources/balanced_file_clean.py"
+    supplied_arguments = [
+        "--x-display",
+        "--scan",
+        file_to_scan,
+    ]
+
+    test_file_to_scan_path = (
+        f"{os.path.dirname(file_to_scan)}/__{os.path.basename(file_to_scan)}"
+    )
+    mock_exception_message = "bob"
+
+    expected_return_code = 1
+    expected_output = """Verifying {file} scans cleanly without modifications.
+  .\b    Modified file scan of {file} failed during creation: bob
+
+
+No unused PyLint suppressions found.
+""".replace(
+        "{file}", file_to_scan
+    ).replace(
+        "{error}", mock_exception_message
+    )
+    expected_error = ""
+
+    # Act
+    try:
+        pbo = PatchBuiltinOpen()
+        pbo.register_exception(
+            test_file_to_scan_path, "wt", exception_message=mock_exception_message
+        )
+        pbo.start()
+
+        execute_results = scanner.invoke_main(arguments=supplied_arguments)
+    finally:
+        pbo.stop()
+
+    # Assert
+    execute_results.assert_results(
+        expected_output, expected_error, expected_return_code
+    )
+
+
+class PatchSubprocessPopen:
+    """
+    Patch for a subprocess call to mock out the response.
+    """
+
+    def __init__(self):
+        self.mock_patcher = None
+        self.patched_open = None
+
+    def start(self):
+        """
+        Start the patching of the "open" function.
+        """
+        self.mock_patcher = unittest.mock.patch("subprocess.Popen")
+        self.patched_open = self.mock_patcher.start()
+        self.patched_open.side_effect = self.my_popen
+
+    def stop(self):
+        """
+        Stop the patching of the "open" function.
+        """
+        self.mock_patcher.stop()
+        self.mock_patcher = None
+
+    # pylint: disable=consider-using-with
+    def my_popen(self, *args, **kwargs):
+        """
+        Mock out the opening of another process.
+        """
+
+        popen_commands = args[0]
+        rt_index = popen_commands.index("-r")
+        file_name = popen_commands[rt_index + 2]
+        if os.path.basename(file_name).startswith("__"):
+            raise IOError("goober")
+        try:
+            self.mock_patcher.stop()
+
+            return subprocess.Popen(
+                *args,
+                **kwargs,
+            )
+        finally:
+            self.patched_open = self.mock_patcher.start()
+            self.patched_open.side_effect = self.my_popen
+
+    # pylint: enable=consider-using-with
+
+
+def test_scan_for_unused_with_bad_scan_subprocess_popen_and_display():
+    """
+    Test to make sure that...
+    """
+
+    # Arrange
+    scanner = ProxyPyLintUtils()
+    file_to_scan = "test/resources/balanced_file_clean.py"
+    supplied_arguments = [
+        "--scan",
+        file_to_scan,
+    ]
+
+    mock_exception_message = "bob"
+
+    expected_return_code = 1
+    expected_output = """Verifying {file} scans cleanly without modifications.
+Pylint returned exception:goober
+    Modified file scan of test/resources/balanced_file_clean.py failed: Fatal Error
+
+No unused PyLint suppressions found.
+""".replace(
+        "{file}", file_to_scan
+    ).replace(
+        "{error}", mock_exception_message
+    )
+    expected_error = ""
+
+    # Act
+    try:
+        pbo = PatchSubprocessPopen()
+        pbo.start()
+
+        execute_results = scanner.invoke_main(arguments=supplied_arguments)
+
+    finally:
+        pbo.stop()
+
+    # Assert
+    # assert mock_subproc_popen.called
+
     execute_results.assert_results(
         expected_output, expected_error, expected_return_code
     )

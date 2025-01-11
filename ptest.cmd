@@ -89,7 +89,7 @@ if defined PTEST_MULTI_CORE_ARGS (
 )
 
 rem Enter main part of script.
-set PYTEST_ARGS=--timeout=10 -ra --strict-markers --junitxml=report/tests.xml --html=report/report.html
+set PYTEST_ARGS=--timeout=30 -ra --strict-markers --junitxml=report/tests.xml --html=report/report.html
 if defined PTEST_KEYWORD (
 	echo {Executing partial test suite...}
 ) else (

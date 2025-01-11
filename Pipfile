@@ -21,12 +21,12 @@ typed-ast = "==1.4.2"
 twine = "*"
 setuptools = "*"
 coverage = "==4.5.4"
-application-properties = "==0.5.0"
+application-properties = "==0.5.2"
 requests = "==2.26.0"
 pytest-xdist = "*"
-project-summarizer = "==0.5.0"
-pymarkdownlnt = "==0.9.3"
+pymarkdownlnt = "==0.9.6"
 columnar = "==1.4.1"
+project-summarizer = {path = "C:/enlistments/project_summarizer/dist/project_summarizer-0.5.0.tar.gz"}
 
 [requires]
 python_version = "3.8"

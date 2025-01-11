@@ -123,10 +123,9 @@ class PyLintUtils:
         # xx = filename.rindex("/")
         # print("xx-->" + str(xx))
         # if xx == -1 or True:
-        if sys.platform.startswith("win"):
-            child_path = filename.replace("/", "\\")
-        else:
-            child_path = filename
+        child_path = (
+            filename.replace("/", "\\") if sys.platform.startswith("win") else filename
+        )
         parent_path = "."
         # else:
         #     child_path = filename[xx + 1 :]
@@ -154,6 +153,8 @@ class PyLintUtils:
     # pylint: disable=broad-except
     def __quack(self, cmd, parent_path):
         return_code = -1
+        found_suppressions = []
+        error_lines = []
         try:
             with subprocess.Popen(
                 cmd,
@@ -170,7 +171,7 @@ class PyLintUtils:
                     poll_return_code = process.poll()
 
                 found_suppressions = []
-                was_any_fatal = False
+                was_any_fatal = poll_return_code in [1, 32]
                 for line in process.stdout:
                     # print("out:" + line + ":")
 
@@ -180,10 +181,9 @@ class PyLintUtils:
 
                     # modify the file name thats output to reverse the path traversal we made
                     parts = line.split(":")
-                    if not was_any_fatal:
-                        was_any_fatal = (
-                            parts[0].lower() == "fatal" or parts[1].lower() == "fatal"
-                        )
+                    was_any_fatal = was_any_fatal or (
+                        parts[0].lower() == "fatal" or parts[1].lower() == "fatal"
+                    )
                     found_suppressions.append(parts)
 
                 # if was_any_fatal:
@@ -191,16 +191,18 @@ class PyLintUtils:
                 # else:
                 #     print(f"Pylint returned normal:{process.returncode}:{cmd}")
                 # for line in process.stdout:
-                #     print("out:" + line + ":")
-                # for line in process.stderr:
-                #     print("err:" + line + ":")
+                #     print(f"out:{line}:")
+                for line in process.stderr:
+                    # print("err:" + line + ":")
+                    error_lines.append(line)
                 return_code = process.returncode
         except Exception as exception:
             print(f"Pylint returned exception:{exception}")
+            return_code = 1
         # print(f"cmd:{cmd}:")
         # print(f"return_code:{return_code}:")
         # print(f"found_suppressions:{found_suppressions}:")
-        return return_code, found_suppressions
+        return return_code, found_suppressions, error_lines
 
     # pylint: enable=broad-except
 
@@ -233,29 +235,39 @@ class PyLintUtils:
     def __validate_original_scans_cleanly(self, next_file, options):
 
         print(f"Verifying {next_file} scans cleanly without modifications.")
-        scan_return_code, found_suppressions = self.my_lint(next_file, options=options)
+        scan_return_code, found_suppressions, error_lines = self.my_lint(
+            next_file, options=options
+        )
         if scan_return_code:
 
-            unique_found_suppressions = []
+            unique_found_suppressions = set()
             for next_item in found_suppressions:
                 next_item = next_item[1].strip()
-                if next_item not in unique_found_suppressions:
-                    unique_found_suppressions.append(next_item)
-            unique_found_suppressions.sort()
+                unique_found_suppressions.add(next_item)
+            found_suppressions = sorted(list(unique_found_suppressions))
 
             suppressions_report = ""
-            for next_item in enumerate(unique_found_suppressions):
+            for next_item in enumerate(found_suppressions):
                 if next_item[0]:
                     suppressions_report += ", "
                 suppressions_report += next_item[1]
 
-            print(
-                f"  Baseline PyLint scan found unsuppressed warnings: {suppressions_report}"
-            )
+            error_output = ""
+            for next_line in error_lines:
+                error_output += "\n  ERR:" + next_line[:-1]
+
+            if suppressions_report:
+                print(
+                    f"  Baseline PyLint scan found unsuppressed warnings: {suppressions_report}"
+                )
+            if error_output:
+                print(
+                    f"  Baseline PyLint scan found reported error output: {error_output}"
+                )
             print("  Fix all errors before scanning again.")
         return scan_return_code
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, too-many-locals
     def __scan_modified_file(
         self, content_lines, logged_properties, next_file, new_file_name, options
     ):
@@ -274,9 +286,11 @@ class PyLintUtils:
             with open(new_file_name, "wt", encoding="utf-8") as outfile:
                 outfile.writelines(modified_content)
 
-            modified_content_return_code, modified_suppressions = self.my_lint(
-                new_file_name, options=options
-            )
+            (
+                modified_content_return_code,
+                modified_suppressions,
+                error_lines,
+            ) = self.my_lint(new_file_name, options=options)
             if modified_content_return_code and modified_content_return_code in [
                 1,
                 32,
@@ -286,21 +300,25 @@ class PyLintUtils:
                     if modified_content_return_code == 1
                     else "Usage Error"
                 )
-                if self.__verbose_mode:
-                    print(
-                        f"    Modified file scan of {next_file} failed: {translated_error_name}"
-                    )
-                else:
-                    print(f"    Modified file scan failed: {translated_error_name}")
+                print(
+                    f"    Modified file scan of {next_file} failed: {translated_error_name}"
+                )
+                if error_lines:
+                    err_output = "".join(f"\n    ERR:{x}" for x in error_lines)
+                    print(err_output)
             else:
                 modified_content_return_code = 0
+        except OSError as this_exception:
+            print(
+                f"    Modified file scan of {next_file} failed during creation: {this_exception}"
+            )
         finally:
             if os.path.exists(new_file_name):
                 os.remove(new_file_name)
 
         return modified_content_return_code, modified_suppressions
 
-    # pylint: enable=too-many-arguments
+    # pylint: enable=too-many-arguments, too-many-locals
 
     @classmethod
     def __search_for_suppression_in_returned_list(
@@ -383,6 +401,7 @@ class PyLintUtils:
                     content_lines, logged_properties, next_file, new_file_name, options
                 )
             if modified_scan_return_code:
+                # print("self.__display_progress>>" + str(self.__display_progress))
                 if self.__display_progress:
                     print("")
                 return 1, None

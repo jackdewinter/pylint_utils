@@ -67,9 +67,13 @@ class InProcessResult:
                 "actual>>%s",
                 actual_stream.getvalue().replace("\n", "\\n"),
             )
-            stream_value = actual_stream.getvalue().replace("\n", "\\n")
+            stream_value = (
+                actual_stream.getvalue().replace("\n", "\\n").replace("\b", "\\b")
+            )
             print(f"WARN>actual>>{stream_value}")
-            LOGGER.warning("expect>>%s", expected_text.replace("\n", "\\n"))
+            LOGGER.warning(
+                "expect>>%s", expected_text.replace("\n", "\\n").replace("\b", "\\b")
+            )
             text_value = expected_text.replace("\n", "\\n")
             print(f"WARN>expect>>{text_value}")
             if log_extra:
@@ -92,8 +96,14 @@ class InProcessResult:
         """
         return self.__std_out
 
+    # pylint: disable=too-many-arguments
     def assert_results(
-        self, stdout=None, stderr=None, error_code=0, additional_error=None
+        self,
+        stdout=None,
+        stderr=None,
+        error_code=0,
+        additional_error=None,
+        output_parts=None,
     ):
         """
         Assert the results are as expected in the "assert" phase.
@@ -108,6 +118,12 @@ class InProcessResult:
                     stdout,
                     log_extra=extra_value,
                 )
+            elif output_parts:
+                for next_part in output_parts:
+                    escaped_next_part = next_part.replace("\n", "\\n")
+                    escaped_output = self.__std_out.getvalue().replace("\n", "\\n")
+                    assert_text = f"Part '{escaped_next_part}' is not present in output '{escaped_output}'."
+                    assert next_part in self.__std_out.getvalue(), assert_text
             else:
                 assert_text = (
                     f"Expected stdout to be empty, not: {self.__std_out.getvalue()}"
@@ -137,6 +153,8 @@ class InProcessResult:
                 self.__std_out.close()
             if self.__std_err:
                 self.__std_err.close()
+
+    # pylint: enable=too-many-arguments
 
 
 # pylint: disable=too-few-public-methods

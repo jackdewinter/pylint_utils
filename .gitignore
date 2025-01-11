@@ -3,3 +3,4 @@ report/**
 build/*
 pylint_utils.egg-info/*
 dist/*
+.vscode/*

@@ -4,7 +4,7 @@
     "measurements": [
         {
             "name": "test.test_detect_unused",
-            "totalTests": 16,
+            "totalTests": 19,
             "failedTests": 0,
             "errorTests": 0,
             "skippedTests": 0,
@@ -21,6 +21,14 @@
         {
             "name": "test.test_main",
             "totalTests": 19,
+            "failedTests": 0,
+            "errorTests": 0,
+            "skippedTests": 0,
+            "elapsedTimeInMilliseconds": 0
+        },
+        {
+            "name": "test.test_plugin",
+            "totalTests": 10,
             "failedTests": 0,
             "errorTests": 0,
             "skippedTests": 0,
