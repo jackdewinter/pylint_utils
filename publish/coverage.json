@@ -2,12 +2,12 @@
     "projectName": "pylint_utils",
     "reportSource": "Unknown",
     "branchLevel": {
-        "totalMeasured": 184,
-        "totalCovered": 184
+        "totalMeasured": 188,
+        "totalCovered": 188
     },
     "lineLevel": {
-        "totalMeasured": 599,
-        "totalCovered": 599
+        "totalMeasured": 601,
+        "totalCovered": 601
     }
 }
 

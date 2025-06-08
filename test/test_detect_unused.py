@@ -273,8 +273,7 @@ def test_scan_for_unused_original_not_clean_with_bad_config() -> None:
         expected_output = ""
         expected_stdout_parts = [
             f"""Verifying {file_to_scan} scans cleanly without modifications.""",
-            """Fix all errors before scanning again.""",
-            "xxxxxx"
+            """Pylint returned exception: Configuration file was not validly formed.""",
         ]
         expected_error = ""
 
@@ -700,7 +699,7 @@ def test_scan_for_unused_with_bad_scan_subprocess_popen_and_display() -> None:
 
         expected_return_code = 1
         expected_output = f"""Verifying {file_to_scan} scans cleanly without modifications.
-Pylint returned exception:goober
+Pylint returned exception: goober
     Modified file scan of {file_to_scan} failed: Fatal Error
 """
         expected_error = ""

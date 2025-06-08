@@ -186,6 +186,9 @@ class PyLintUtils:
 
                     # modify the file name thats output to reverse the path traversal we made
                     parts = line.split(":")
+                    if len(parts) > 3 and parts[3].strip() == "F0011":
+                        raise ValueError("Configuration file was not validly formed.")
+
                     was_any_fatal = was_any_fatal or (
                         parts[0].lower() == "fatal" or parts[1].lower() == "fatal"
                     )
@@ -201,7 +204,7 @@ class PyLintUtils:
                 error_lines.extend(iter(process.stderr))
                 return_code = process.returncode
         except Exception as exception:
-            print(f"Pylint returned exception:{exception}")
+            print(f"Pylint returned exception: {exception}")
             return_code = 1
         # print(f"cmd:{cmd}:")
         # print(f"return_code:{return_code}:")
@@ -264,10 +267,10 @@ class PyLintUtils:
 
             error_output = "".join(f"\n  ERR:{line.rstrip()}" for line in error_lines)
 
-            assert suppressions_report
-            print(
-                f"  Baseline PyLint scan found unsuppressed warnings: {suppressions_report}"
-            )
+            if suppressions_report:
+                print(
+                    f"  Baseline PyLint scan found unsuppressed warnings: {suppressions_report}"
+                )
             if error_output:
                 print(
                     f"  Baseline PyLint scan found reported error output: {error_output}"
