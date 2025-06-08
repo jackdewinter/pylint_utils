@@ -69,6 +69,7 @@ jobs:
 
       - name: Sync With Repository
         run: |
+          export PYTHONIOENCODING=utf-8
           pipenv lock --clear --python ${{ matrix.python }}
           pipenv sync -d
           pipenv graph
@@ -123,12 +124,14 @@ jobs:
 
       - name: Sync With Repository
         run: |
+          export PYTHONIOENCODING=utf-8
           pipenv lock --clear --python ${{ env.default-python-version }}
           pipenv sync -d
           pipenv graph
 
       - name: Execute Pre-Commit
         run: |
+          export PYTHONIOENCODING=utf-8
           pipenv run pre-commit run --all
 
   packaging:
@@ -158,20 +161,24 @@ jobs:
 
       - name: Sync With Repository
         run: |
+          export PYTHONIOENCODING=utf-8
           pipenv lock --clear --python ${{ env.default-python-version }}
           pipenv sync -d
           pipenv graph
 
       - name: Pyroma
         run: |
+          export PYTHONIOENCODING=utf-8
           pipenv run pyroma -n 10 .
 
       - name: Setup
         run: |
+          export PYTHONIOENCODING=utf-8
           pipenv run python setup.py sdist bdist_wheel
 
       - name: Twine
         run: |
+          export PYTHONIOENCODING=utf-8
           pipenv run twine check dist/*    
 
       - name: Upload Package
