@@ -259,7 +259,7 @@ def test_scan_for_unused_original_not_clean_with_bad_config() -> None:
 
     with obtain_multiprocess_lock(ACTIVE_LOCK_FILE_NAME):
         # Arrange
-        configuration_file = "test/resources/README.md"
+        configuration_file = "README.md"
         scanner = ProxyPyLintUtils()
         file_to_scan = "test/resources/balanced_file.py"
         supplied_arguments = [
