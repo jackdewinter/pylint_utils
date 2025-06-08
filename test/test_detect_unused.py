@@ -274,6 +274,7 @@ def test_scan_for_unused_original_not_clean_with_bad_config() -> None:
         expected_stdout_parts = [
             f"""Verifying {file_to_scan} scans cleanly without modifications.""",
             """Fix all errors before scanning again.""",
+            "xxxxxx"
         ]
         expected_error = ""
 
