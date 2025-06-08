@@ -64,11 +64,11 @@ jobs:
 
       - name: Install PipEnv
         run: |
+          export PYTHONIOENCODING=utf-8
           pip install pipenv==${{ env.default-pipenv-version }}
 
       - name: Sync With Repository
         run: |
-          export PYTHONIOENCODING=utf-8
           pipenv lock --clear --python ${{ matrix.python }}
           pipenv sync -d
           pipenv graph
@@ -118,6 +118,7 @@ jobs:
 
       - name: Install PipEnv
         run: |
+          export PYTHONIOENCODING=utf-8
           pip install pipenv==${{ env.default-pipenv-version }}
 
       - name: Sync With Repository
@@ -152,6 +153,7 @@ jobs:
 
       - name: Install PipEnv
         run: |
+          export PYTHONIOENCODING=utf-8
           pip install pipenv==${{ env.default-pipenv-version }}
 
       - name: Sync With Repository
@@ -162,7 +164,7 @@ jobs:
 
       - name: Pyroma
         run: |
-          pipenv run pyroma -q -n 10 .
+          pipenv run pyroma -n 10 .
 
       - name: Setup
         run: |

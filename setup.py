@@ -75,7 +75,7 @@ ONE_LINE_DESCRIPTION = get_description()
 LONG_DESCRIPTION = load_readme_file()
 LONG_DESCRIPTION_CONTENT_TYPE = "text/markdown"
 
-KEYWORDS = []
+KEYWORDS = ["pylint", "code quality", "development"]
 PROJECT_CLASSIFIERS = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",

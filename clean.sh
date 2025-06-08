@@ -262,10 +262,6 @@ check_for_unsychronized_virtual_environment() {
 
 synchronize_virtual_environment() {
 
-	# TODO consider
-	# python.exe -m pip install --upgrade pip
-	# pip install -U pipenv
-
 	verbose_echo "{Syncing python packages in virtual environment.}"
 	rm Pipfile.lock >/dev/null 2>&1
 	if ! pipenv lock --python "${RESET_PYTHON_VERSION}" >"${TEMP_FILE}" 2>&1; then
@@ -427,6 +423,16 @@ start_process
 
 load_properties_from_file
 
+if ! python.exe -m pip install --upgrade pip >"${TEMP_FILE}" 2>&1; then
+	cat "${TEMP_FILE}"
+	complete_process 1 "{Cannot ensure pip has been upgraded.  Please check your Python installation and try again.}"
+fi
+
+if ! pip install -U pipenv==2025.0.3 >"${TEMP_FILE}" 2>&1; then
+	cat "${TEMP_FILE}"
+	complete_process 1 "{Cannot ensure pipenv has been upgraded.  Please check your Python installation and try again.}"
+fi
+
 RESET_PIPFILE=0
 if [[ ${FORCE_RESET_MODE} -ne 0 ]]; then
 	remove_virtual_environment
@@ -456,6 +462,11 @@ else
 	if [[ ${SOURCERY_ONLY_MODE} -ne 0 ]]; then
 		complete_process 0
 	fi
+fi
+
+if ! pipenv run pyroma -n 10 . >"${TEMP_FILE}" 2>&1; then
+	cat "${TEMP_FILE}"
+	complete_process 1 "{Executing pyroma on Python code failed.}"
 fi
 
 if [[ ${PERFORMANCE_ONLY_MODE} -eq 0 ]]; then
