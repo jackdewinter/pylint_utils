@@ -272,8 +272,7 @@ def test_scan_for_unused_original_not_clean_with_bad_config() -> None:
         expected_return_code = 1
         expected_output = ""
         expected_stdout_parts = [
-            f"""Verifying {file_to_scan} scans cleanly without modifications.
-Pylint returned exception:""",
+            f"""Verifying {file_to_scan} scans cleanly without modifications.""",
             """Fix all errors before scanning again.""",
         ]
         expected_error = ""

@@ -449,12 +449,12 @@ def test_project_summarizer_bad_3() -> None:
 
         expected_return_code = 1
         expected_output = ""
-        if sys.platform == "darwin":
-            expected_error = f"File error opening report file: [Errno 21] Is a directory: '{temporary_report_directory}'"
-        else:
+        if sys.platform.startswith("win"):
             expected_error = (
                 "File error opening report file: [Errno 13] Permission denied:"
             )
+        else:
+            expected_error = f"File error opening report file: [Errno 21] Is a directory: '{temporary_report_directory}'"
         additional_error = ["\n"]
 
         # Act
