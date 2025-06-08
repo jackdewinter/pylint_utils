@@ -68,6 +68,7 @@ jobs:
 
       - name: Sync With Repository
         run: |
+          export PYTHONIOENCODING=utf-8
           pipenv lock --clear --python ${{ matrix.python }}
           pipenv sync -d
           pipenv graph
