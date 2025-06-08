@@ -19,8 +19,8 @@
             "elapsedTimeInMilliseconds": 0
         },
         {
-            "name": "test.test_main",
-            "totalTests": 19,
+            "name": "test.test_logging",
+            "totalTests": 4,
             "failedTests": 0,
             "errorTests": 0,
             "skippedTests": 0,
