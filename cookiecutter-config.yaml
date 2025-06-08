@@ -1,6 +1,6 @@
 default_context:
     project_name: "pylint_utils"
-    project_version: "0.5.1"
+    project_version: "0.5.2"
 
     main_class_name : "PyLintUtils"
     project_src_additional_path: ""
