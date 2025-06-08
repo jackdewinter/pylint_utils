@@ -4,6 +4,7 @@ Module to provide tests related to
 
 import json
 import os
+import sys
 import tempfile
 from test.patch_builtin_open import PatchBuiltinOpen
 from test.proxypylintutils import ProxyPyLintUtils
@@ -448,7 +449,12 @@ def test_project_summarizer_bad_3() -> None:
 
         expected_return_code = 1
         expected_output = ""
-        expected_error = "File error opening report file: [Errno 13] Permission denied:"
+        if sys.platform == "darwin":
+            expected_error = f"File error opening report file: [Errno 21] Is a directory: '{temporary_report_directory}'"
+        else:
+            expected_error = (
+                "File error opening report file: [Errno 13] Permission denied:"
+            )
         additional_error = ["\n"]
 
         # Act
