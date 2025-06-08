@@ -42,7 +42,7 @@ jobs:
   scenario-tests:
 
     name: Scenario Tests
-    needs: matrix-prep
+    needs: [ matrix-prep, lint ]
     strategy:
       matrix: ${{fromJson(needs.matrix-prep.outputs.matrix)}}
     runs-on: ${{ matrix.platform }}
