@@ -8,7 +8,9 @@ import tempfile
 from test.patch_builtin_open import PatchBuiltinOpen
 from test.proxypylintutils import ProxyPyLintUtils
 from test.pytest_execute import InProcessExecution
+from typing import List, Optional
 
+# TODO should be able to remove the suppression
 from project_summarizer.main import ProjectSummarizer
 
 
@@ -17,31 +19,34 @@ class ProxyProjectSummarizer(InProcessExecution):
     Class to provide for a local instance of an InProcessExecution class.
     """
 
-    def __init__(self, use_module=False, use_main=False):
+    def __init__(self, use_module: bool = False, use_main: bool = False) -> None:
         super().__init__()
         _ = use_main, use_module
 
-    def execute_main(self):
+    def execute_main(self, direct_arguments: Optional[List[str]] = None) -> None:
         ProjectSummarizer().main()
 
-    def get_main_name(self):
+    def get_main_name(self) -> str:
         return "bob"
 
 
 def __generate_report_file(
-    file_to_scan, report_file_name, report_directory, publish_directory=None
-):
-    scanner = ProxyPyLintUtils()
+    file_to_scan: str,
+    report_file_name: str,
+    report_directory: str,
+    publish_directory: Optional[str] = None,
+) -> None:
+    pylint_scanner = ProxyPyLintUtils()
     supplied_arguments = [
         "--report",
         report_file_name,
         file_to_scan,
     ]
-    execute_results = scanner.invoke_main(arguments=supplied_arguments)
+    execute_results = pylint_scanner.invoke_main(arguments=supplied_arguments)
     assert not execute_results.return_code
 
     if publish_directory:
-        scanner = ProxyProjectSummarizer()
+        project_summarizer_scanner = ProxyProjectSummarizer()
         supplied_arguments = [
             "--add-plugin",
             "pylint_utils/pylint_suppression_summarizer_plugin.py",
@@ -52,10 +57,12 @@ def __generate_report_file(
             "--pylint-suppressions",
             report_file_name,
         ]
-        execute_results = scanner.invoke_main(arguments=supplied_arguments)
+        execute_results = project_summarizer_scanner.invoke_main(
+            arguments=supplied_arguments
+        )
         assert not execute_results.return_code
 
-        scanner = ProxyProjectSummarizer()
+        project_summarizer_scanner = ProxyProjectSummarizer()
         supplied_arguments = [
             "--add-plugin",
             "pylint_utils/pylint_suppression_summarizer_plugin.py",
@@ -65,11 +72,13 @@ def __generate_report_file(
             publish_directory,
             "--publish",
         ]
-        execute_results = scanner.invoke_main(arguments=supplied_arguments)
+        execute_results = project_summarizer_scanner.invoke_main(
+            arguments=supplied_arguments
+        )
         assert not execute_results.return_code
 
 
-def test_project_summarizer_base_report():
+def test_project_summarizer_base_report() -> None:
     """
     Test to make sure that the plugin can generate a basic report.
     """
@@ -104,10 +113,10 @@ def test_project_summarizer_base_report():
 ---------------------
 
 
-  SUPPRESSION         COUNT  DELTA
+  SUPPRESSION                    COUNT  DELTA
 
-  too-many-arguments      1     +1
-
+  too-many-arguments                 1     +1
+  too-many-positional-arguments      1     +1
 
 """
                 expected_error = ""
@@ -124,7 +133,7 @@ def test_project_summarizer_base_report():
                     os.remove(report_file_name)
 
 
-def test_project_summarizer_base_report_with_same_publish():
+def test_project_summarizer_base_report_with_same_publish() -> None:
     """
     Test to make sure that the plugin can generate a basic report.
     """
@@ -160,10 +169,10 @@ def test_project_summarizer_base_report_with_same_publish():
 ---------------------
 
 
-  SUPPRESSION         COUNT  DELTA
+  SUPPRESSION                    COUNT  DELTA
 
-  too-many-arguments      1      0
-
+  too-many-arguments                 1      0
+  too-many-positional-arguments      1      0
 
 """
                 expected_error = ""
@@ -180,7 +189,7 @@ def test_project_summarizer_base_report_with_same_publish():
                     os.remove(report_file_name)
 
 
-def test_project_summarizer_base_report_with_same_publish_x():
+def test_project_summarizer_base_report_with_same_publish_x() -> None:
     """
     Test to make sure that the plugin can generate a basic report.
     """
@@ -221,10 +230,10 @@ def test_project_summarizer_base_report_with_same_publish_x():
 ---------------------
 
 
-  SUPPRESSION         COUNT  DELTA
+  SUPPRESSION                    COUNT  DELTA
 
-  too-many-arguments      0     -1
-
+  too-many-arguments                 0     -1
+  too-many-positional-arguments      0     -1
 
 """
                 expected_error = ""
@@ -241,7 +250,7 @@ def test_project_summarizer_base_report_with_same_publish_x():
                     os.remove(report_file_name)
 
 
-def test_project_summarizer_base_report_with_same_publish_only_changes():
+def test_project_summarizer_base_report_with_same_publish_only_changes() -> None:
     """
     Test to make sure that the plugin can generate a basic report.
     """
@@ -294,7 +303,7 @@ PyLint suppressions have not changed since last published suppressions.
                     os.remove(report_file_name)
 
 
-def test_project_summarizer_base_report_with_same_publish_quiet():
+def test_project_summarizer_base_report_with_same_publish_quiet() -> None:
     """
     Test to make sure that the plugin can generate a basic report.
     """
@@ -342,7 +351,7 @@ def test_project_summarizer_base_report_with_same_publish_quiet():
                     os.remove(report_file_name)
 
 
-def test_project_summarizer_bad_1():
+def test_project_summarizer_bad_1() -> None:
     """
     Test to make sure that the plugin can generate a basic report.
     """
@@ -352,8 +361,7 @@ def test_project_summarizer_bad_1():
         try:
             with tempfile.NamedTemporaryFile(delete=False, mode="w+") as temp_file:
                 report_file_name = temp_file.name
-                report_dictionary = {}
-                json.dump(report_dictionary, temp_file.file)
+                json.dump({}, temp_file.file)
 
             scanner = ProxyProjectSummarizer()
             supplied_arguments = [
@@ -383,7 +391,7 @@ def test_project_summarizer_bad_1():
                 os.remove(report_file_name)
 
 
-def test_project_summarizer_bad_2():
+def test_project_summarizer_bad_2() -> None:
     """
     Test to make sure that the plugin can generate a basic report.
     """
@@ -421,7 +429,7 @@ def test_project_summarizer_bad_2():
                 os.remove(report_file_name)
 
 
-def test_project_summarizer_bad_3():
+def test_project_summarizer_bad_3() -> None:
     """
     Test to make sure that the plugin can generate a basic report.
     """
@@ -455,7 +463,7 @@ def test_project_summarizer_bad_3():
         )
 
 
-def test_project_summarizer_bad_4():
+def test_project_summarizer_bad_4() -> None:
     """
     Test to make sure that the plugin can generate a basic report.
     """
@@ -510,7 +518,7 @@ def test_project_summarizer_bad_4():
                     os.remove(report_file_name)
 
 
-def test_project_summarizer_bad_5():
+def test_project_summarizer_bad_5() -> None:
     """
     Test to make sure that the plugin can generate a basic report.
     """

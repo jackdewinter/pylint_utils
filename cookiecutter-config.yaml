@@ -1,0 +1,29 @@
+default_context:
+    project_name: "pylint_utils"
+    project_version: "0.5.1"
+
+    main_class_name : "PyLintUtils"
+    project_src_additional_path: ""
+    project_src_dependencies: "columnar, pytest, project-summarizer==0.5.1, portalocker"
+
+    pypi_package_name: "pylint_utils"
+
+    github_organization: "jackdewinter"
+    github_project_name: "pylint_utils"
+    github_primary_branch_name: "master"
+
+    one_line_setup_description : "Various tools used to examine pylint suppressions and catalog them."
+    
+    setup_intended_audience : "\"Intended Audience :: Developers\","
+    setup_additional_classifier : "\"Topic :: Software Development :: Libraries :: Application Frameworks\","
+    setup_keywords : ""
+    setup_package_modules : "\"pylint_utils\","
+    setup_entry_points : "\"pylint_utils=pylint_utils.__main__:main\","
+    
+    rtd_site_name : "pylint_utils"
+    rtd_deploy_name : "pylint_utils"
+
+    # "main_class_name" : "DefaultClassName"
+    # one_line_help_description : "A simple tool for summarizing information about the current project."
+    # "setup_development_status" : "4 - Beta",
+    # "setup_package_data" : "\"\": [\"*.typed\"]",

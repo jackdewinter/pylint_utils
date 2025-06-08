@@ -1,7 +1,9 @@
 """
 Module to patch the "builtin.open" function.
 """
+
 import unittest.mock
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 
 class PatchBuiltinOpen:
@@ -9,48 +11,53 @@ class PatchBuiltinOpen:
     Class to patch the "builtin.open" function.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.mock_patcher = None
         self.patched_open = None
-        self.open_file_args = None
-        self.content_map = {}
-        self.exception_map = {}
+        self.open_file_args: List[Any] = []
+        self.content_map: Dict[str, str] = {}
+        self.exception_map: Dict[str, Tuple[str, Optional[str]]] = {}
 
-    def start(self):
+    def start(self) -> None:
         """
         Start the patching of the "open" function.
         """
-        self.mock_patcher = unittest.mock.patch("builtins.open")
-        self.patched_open = self.mock_patcher.start()
-        self.patched_open.side_effect = self.my_open
+        self.mock_patcher = unittest.mock.patch("builtins.open")  # type: ignore
+        self.patched_open = self.mock_patcher.start()  # type: ignore
+        self.patched_open.side_effect = self.__my_open  # type: ignore
         self.open_file_args = [f"map={str(self.exception_map)}"]
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop the patching of the "open" function.
         """
-        self.mock_patcher.stop()
+        self.mock_patcher.stop()  # type: ignore
         self.mock_patcher = None
 
-    def register_text_content(self, exact_file_name, file_contents):
+    def register_text_content(self, exact_file_name: str, file_contents: str) -> None:
         """
         Register text content to return when the specified file is opened for reading as
         a test file.
         """
         self.content_map[exact_file_name] = file_contents
 
-    def register_exception(self, exact_file_name, file_mode, exception_message=None):
+    def register_exception(
+        self,
+        exact_file_name: str,
+        file_mode: str,
+        exception_message: Optional[str] = None,
+    ) -> None:
         """
         Register an exception to raise when the specified file is opened with the given mode.
         """
         self.exception_map[exact_file_name] = (file_mode, exception_message)
 
-    # pylint: disable=consider-using-with
-    def my_open(self, *args, **kwargs):
+    # pylint: disable=unspecified-encoding
+    def __my_open(self, *args: List[Any], **kwargs: Dict[str, Any]) -> Any:
         """
         Provide alternate handling of the "builtins.open" function.
         """
-        filename = args[0]
+        filename = cast(str, args[0])
         filemode = args[1] if len(args) > 1 else "r"
         if filename in self.content_map and filemode == "r":
             self.open_file_args.append((args, "text-content"))
@@ -67,16 +74,16 @@ class PatchBuiltinOpen:
                 raise IOError(exception_message)
             self.open_file_args.append((args, "exception-mode-mismatch"))
 
-        self.mock_patcher.stop()
+        self.mock_patcher.stop()  # type: ignore
         try:
             self.open_file_args.append((args, "passthrough"))
-            return open(
+            return open(  # type: ignore
                 filename,
                 filemode,
                 **kwargs,
             )
         finally:
-            self.patched_open = self.mock_patcher.start()
-            self.patched_open.side_effect = self.my_open
+            self.patched_open = self.mock_patcher.start()  # type: ignore
+            self.patched_open.side_effect = self.__my_open  # type: ignore
 
-    # pylint: enable=consider-using-with
+    # pylint: enable=unspecified-encoding

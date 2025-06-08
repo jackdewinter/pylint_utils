@@ -7,58 +7,166 @@ on:
   pull_request:
     branches:
       - master
-  schedule:
-    - cron: '0 0 * * *'  # daily at midnight
+
+env:
+  project-name: pylint_utils
+  default-python-version: 3.13
+  default-pipenv-version: 2023.12.1
 
 jobs:
-  scenario-tests:
-    strategy:
-      matrix:
-        python: [3.8]
-        platform: [windows-latest, ubuntu-latest]
-    runs-on: ${{ matrix.platform }}
+
+  matrix-prep:
+
+    name: Prepare Test Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    defaults:
+      run:
+        shell: bash
+
     steps:
+
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Calculate test matrix
+      id: set-matrix
+      run: |
+        branchName=$(echo '${{ github.ref }}' | sed 's,refs/heads/,,g')
+        matrix=$(jq --arg branchName "$branchName" 'map(. | select((.runOn==$branchName) or (.runOn=="always")) )' .github/workflows/matrix_includes.json)
+        echo "matrix={\"include\":$(echo $matrix)}" >> $GITHUB_OUTPUT
+
+  scenario-tests:
+
+    name: Scenario Tests
+    needs: matrix-prep
+    strategy:
+      matrix: ${{fromJson(needs.matrix-prep.outputs.matrix)}}
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: ${{ matrix.timeout }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+
       - name: Checkout Repository
         uses: actions/checkout@master
-      - name: Setup Python 3.8
-        uses: actions/setup-python@v1
+
+      - name: Setup Python ${{ matrix.python }}
+        uses: actions/setup-python@v5.6.0
         with:
-          python-version: 3.8
+          python-version: ${{ matrix.python }}
+
       - name: Install PipEnv
-        uses: dschep/install-pipenv-action@v1
-        with:
-          version: 2021.5.29
+        run: |
+          pip install pipenv==${{ env.default-pipenv-version }}
+
       - name: Sync With Repository
-        run: pipenv sync
+        run: |
+          pipenv lock --clear --python ${{ matrix.python }}
+          pipenv sync -d
+          pipenv graph
+
       - name: Execute Tests
-        run: pipenv run pytest --timeout=10 --strict-markers --cov --cov-branch --cov-report xml:report/coverage.xml --cov-report html:report/coverage
+        run: pipenv run pytest --cov-fail-under=80 --cov --cov-branch --cov-report xml:report/coverage.xml --cov-report html:report/coverage
+
       - name: Archive coverage artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }} Coverage
           path: |
             ./report/coverage.xml
             ./report/coverage
+
+      - name: Report Coverage
+        uses: codecov/codecov-action@v5
+        if: github.event_name != 'schedule'
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          file: ./report/coverage.xml
+          name: ${{ matrix.python }} - ${{ matrix.platform }}
+          fail_ci_if_error: true
+
   lint:
-    strategy:
-      matrix:
-        python: [3.8]
-        platform: [windows-latest]
-    runs-on: ${{ matrix.platform }}
+
+    name: Project Quality Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        shell: bash
+
     steps:
+
       - name: Checkout Repository
         uses: actions/checkout@master
+
       - name: Setup Python 3.8
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v5.6.0
         with:
           python-version: 3.8
+
       - name: Install PipEnv
-        uses: dschep/install-pipenv-action@v1
+        run: |
+          pip install pipenv==${{ env.default-pipenv-version }}
+
       - name: Sync With Repository
-        run: pipenv sync
-      - name: Execute Flake8
-        run: pipenv run flake8 --exclude dist,build,test/resources
-      - name: Execute PyLint on Source
-        run: pipenv run pylint --rcfile=setup.cfg ./pylint_utils
-      - name: Execute PyLint on Tests
-        run: pipenv run pylint --rcfile=setup.cfg --ignore test\resources ./test
+        run: |
+          pipenv lock --clear --python ${{ env.default-python-version }}
+          pipenv sync -d
+          pipenv graph
+
+      - name: Execute Pre-Commit
+        run: |
+          pipenv run pre-commit run --all
+
+  packaging:
+
+    name: Package Library
+    needs: [ lint, scenario-tests ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@master
+
+      - name: Setup Python ${{ env.default-python-version }}
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: ${{ env.default-python-version }}
+
+      - name: Install PipEnv
+        run: |
+          pipenv lock --clear --python ${{ env.default-python-version }}
+
+      - name: Sync With Repository
+        run: |
+          pipenv lock
+          pipenv sync -d
+          pipenv graph
+
+      - name: Pyroma
+        run: |
+          pipenv run pyroma -q -n 10 .
+
+      - name: Setup
+        run: |
+          pipenv run python setup.py sdist bdist_wheel
+
+      - name: Twine
+        run: |
+          pipenv run twine check dist/*    
+
+      - name: Upload Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaged-library
+          path: ${{github.workspace}}/dist/

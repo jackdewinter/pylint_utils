@@ -1,4 +1,4 @@
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments, too-many-positional-arguments
 def __print_me(first, second, third, fourth, fifth, sixth, seventh):
     print(f"first={first}")
     print(f"second={second}")
@@ -9,6 +9,6 @@ def __print_me(first, second, third, fourth, fifth, sixth, seventh):
     print(f"seventh={seventh}")
 
 
-# pylint: enable=too-many-arguments
+# pylint: enable=too-many-arguments, too-many-positional-arguments
 
 __print_me(1, "2", 3.0, 4, "five", 6.00, "7th")

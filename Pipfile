@@ -1,35 +1,35 @@
 [[source]]
-name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
+name = "pypi"
 
 [dev-packages]
+build = "==0.10.0"
+cookieslicer = "==0.1.5"
+coverage = "==7.8.0"
+importlib-metadata = "==8.7.0"
+portalocker = "*"
+pre-commit = "==3.3.3"
+project-summarizer = "==0.5.1"
+py = "==1.11.0"
+pylint = "==3.3.7"
+pyroma = "==4.2"
+pytest = "==8.3.4"
+pytest-console-scripts = "==1.4.1"
+pytest-cov = "==6.1.1"
+pytest-html = "==4.1.1"
+pytest-timeout = "==2.3.1"
+pytest-xdist = "==3.6.1"
+setuptools = "==80.7.1"
+sourcery = "==1.15.0"
+twine = "<5.1"
 
 [packages]
-black = "*"
-isort = "*"
-flake8 = "*"
-pylint = "*"
-pytest-cov = "==2.10.1"
-pytest-console-scripts = "*"
-pytest-timeout = "*"
-tabulate = "*"
-pytest-html = "*"
-snakeviz = "*"
-typing-extensions = "*"
-typed-ast = "==1.4.2"
-twine = "*"
-setuptools = "*"
-coverage = "==4.5.4"
-application-properties = "==0.5.2"
-requests = "==2.26.0"
-pytest-xdist = "*"
-pymarkdownlnt = "==0.9.6"
-columnar = "==1.4.1"
-project-summarizer = {path = "C:/enlistments/project_summarizer/dist/project_summarizer-0.5.0.tar.gz"}
+typing-extensions = ">=4.5.0"
+columnar = ">=1.4.1"
 
 [requires]
-python_version = "3.8"
+python_version = "3.13"
 
 [pipenv]
-allow_prereleases = true
+allow_prereleases = false

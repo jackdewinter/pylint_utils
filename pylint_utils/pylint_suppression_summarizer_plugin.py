@@ -6,7 +6,7 @@ pylint suppressions.
 import argparse
 import json
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from project_summarizer.plugin_manager.bad_plugin_error import BadPluginError
 from project_summarizer.plugin_manager.plugin_details import PluginDetails
@@ -29,7 +29,7 @@ class PylintSuppressionSummarizerPlugin(ProjectSummarizerPlugin):
     __PLUGIN_NAME = "PyLint Suppressions Summary"
     __PLUGIN_VERSION = "0.5.0"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.__output_path: str = ""
         self.__context: Optional[SummarizeContext] = None
@@ -57,9 +57,8 @@ class PylintSuppressionSummarizerPlugin(ProjectSummarizerPlugin):
         """
         return self.__output_path
 
-    @classmethod
     def add_command_line_arguments(
-        cls, parser: argparse.ArgumentParser
+        self, parser: argparse.ArgumentParser
     ) -> Tuple[str, str]:
         """
         Add a command line argument to denote the file to scan.
@@ -109,7 +108,7 @@ class PylintSuppressionSummarizerPlugin(ProjectSummarizerPlugin):
 
     def generate_report(
         self, only_changes: bool, column_width: int, report_file: str
-    ) -> None:
+    ) -> Optional[Tuple[List[str], List[str], List[List[str]]]]:
         """
         Generate the report and display it.
         """
@@ -167,15 +166,15 @@ class PylintSuppressionSummarizerPlugin(ProjectSummarizerPlugin):
         self,
         new_stats: Dict[str, int],
         loaded_stats: Dict[str, int],
-        only_changes,
-    ):
+        only_changes: bool,
+    ) -> Optional[Tuple[List[str], List[str], List[List[str]]]]:
 
-        new_keys = set(new_stats.keys())
-        new_keys = sorted(list(new_keys.union(loaded_stats.keys())))
+        new_keysx = set(new_stats.keys())
+        new_keys = sorted(list(new_keysx.union(loaded_stats.keys())))
 
         display_rows = []
         for next_key in new_keys:
-            line_data = None
+            line_data: List[Union[str, int]] = []
             if next_key in new_stats:
                 if next_key in loaded_stats:
                     line_data = [

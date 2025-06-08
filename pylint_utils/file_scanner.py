@@ -2,10 +2,12 @@
 Module to provide for an easy manner in which to collect files to process.
 """
 
+import argparse
 import glob
 import logging
 import os
 import sys
+from typing import List, Optional, Set, Tuple, cast
 
 LOGGER = logging.getLogger(__name__)
 
@@ -16,7 +18,9 @@ class FileScanner:
     """
 
     @staticmethod
-    def add_standard_arguments(parser, add_list_files_argument=False):
+    def add_standard_arguments(
+        parser: argparse.ArgumentParser, add_list_files_argument: bool = False
+    ) -> None:
         """
         Add any required arguments for scanning for files to the command line.
         """
@@ -53,15 +57,16 @@ class FileScanner:
         )
 
     @classmethod
-    def __is_file_eligible_to_scan(cls, path_to_test):
+    def __is_file_eligible_to_scan(cls, path_to_test: str) -> bool:
         """
         Determine if the presented path is one that we want to scan.
         """
         return path_to_test.endswith(".py")
 
+    # TODO replace with file scanner package
     def __process_next_path_directory(
-        self, next_path, files_to_parse, recurse_directories
-    ):
+        self, next_path: str, files_to_parse: Set[str], recurse_directories: bool
+    ) -> None:
         LOGGER.debug("Provided path '%s' is a directory. Walking directory.", next_path)
         normalized_next_path = next_path.replace("\\", "/")
         for root, _, files in os.walk(next_path):
@@ -79,8 +84,12 @@ class FileScanner:
                     files_to_parse.add(rooted_file_path)
 
     def __process_next_path(
-        self, next_path, files_to_parse, recurse_directories, ignore_bad_matches
-    ):
+        self,
+        next_path: str,
+        files_to_parse: Set[str],
+        recurse_directories: bool,
+        ignore_bad_matches: bool,
+    ) -> bool:
 
         did_find_any = False
         LOGGER.info("Determining files to scan for path '%s'.", next_path)
@@ -119,28 +128,34 @@ class FileScanner:
         return did_find_any
 
     @classmethod
-    def __remove_ignored_paths(cls, ignore_paths, files_to_parse):
-        ignore_items = []
+    def __remove_ignored_paths(
+        cls, ignore_paths: List[str], files_to_parse: List[str]
+    ) -> None:
+        ignore_items: List[str] = []
         for next_path in ignore_paths:
             if next_path in files_to_parse:
                 ignore_items.append(next_path)
             else:
                 next_path_as_directory = (
-                    next_path + "/"
-                    if not (next_path.endswith("/") or next_path.endswith("\\"))
-                    else next_path
+                    next_path
+                    if next_path.endswith("/") or next_path.endswith("\\")
+                    else f"{next_path}/"
                 )
                 next_path_as_directory = next_path_as_directory.replace("\\", "/")
 
-                for next_file_path in files_to_parse:
-                    if next_file_path.startswith(next_path_as_directory):
-                        ignore_items.append(next_file_path)
+                ignore_items.extend(
+                    next_file_path
+                    for next_file_path in files_to_parse
+                    if next_file_path.startswith(next_path_as_directory)
+                )
         for next_path_to_ignore in ignore_items:
             if next_path_to_ignore in files_to_parse:
                 list_index = files_to_parse.index(next_path_to_ignore)
                 del files_to_parse[list_index]
 
-    def determine_files_to_scan(self, args):
+    def determine_files_to_scan(
+        self, args: argparse.Namespace
+    ) -> Tuple[List[str], bool]:
         """
         Scan through the specified paths for any eligible files.
         """
@@ -152,11 +167,11 @@ class FileScanner:
         )
 
         did_error_scanning_files = False
-        files_to_parse = set()
+        files_to_parse: Set[str] = set()
         for next_path in eligible_paths:
             if "*" in next_path or "?" in next_path:
                 LOGGER.debug("Path '%s' is a glob.", next_path)
-                globbed_paths = glob.glob(next_path)
+                globbed_paths = cast(List[str], glob.glob(next_path))
                 if not globbed_paths:
                     print(
                         f"Provided glob path '{next_path}' did not match any files.",
@@ -177,17 +192,17 @@ class FileScanner:
                     did_error_scanning_files = True
                     break
 
-        files_to_parse = list(files_to_parse)
-        files_to_parse.sort()
-
+        sorted_files_to_parse = sorted(files_to_parse)
         if ignore_paths:
-            self.__remove_ignored_paths(ignore_paths, files_to_parse)
+            self.__remove_ignored_paths(ignore_paths, sorted_files_to_parse)
 
-        LOGGER.info("Number of files found: %s", str(len(files_to_parse)))
-        return files_to_parse, did_error_scanning_files
+        LOGGER.info("Number of files found: %s", str(len(sorted_files_to_parse)))
+        return sorted_files_to_parse, did_error_scanning_files
 
     @staticmethod
-    def handle_list_files_if_argument_present(args, files_to_scan):
+    def handle_list_files_if_argument_present(
+        args: argparse.Namespace, files_to_scan: List[str]
+    ) -> Optional[int]:
         """
         If the `add_standard_arguments` function added a list files argument and it was
         set, then process.  Otherwise return None.
