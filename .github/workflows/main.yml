@@ -70,7 +70,7 @@ jobs:
       - name: Sync With Repository
         run: |
           export PYTHONIOENCODING=utf-8
-          sed -i '/^sourcery/{d;}' Pipfile
+          grep -v '^sourcery' Pipfile > Pipfile
           cat Pipfile
           pipenv lock --clear --python ${{ matrix.python }}
           pipenv sync -d
@@ -127,7 +127,7 @@ jobs:
       - name: Sync With Repository
         run: |
           export PYTHONIOENCODING=utf-8
-          sed -i '/^sourcery/{d;}' Pipfile
+          grep -v '^sourcery' Pipfile > Pipfile
           cat Pipfile
           pipenv lock --clear --python ${{ env.default-python-version }}
           pipenv sync -d
@@ -166,7 +166,7 @@ jobs:
       - name: Sync With Repository
         run: |
           export PYTHONIOENCODING=utf-8
-          sed -i '/^sourcery/{d;}' Pipfile
+          grep -v '^sourcery' Pipfile > Pipfile
           cat Pipfile
           pipenv lock --clear --python ${{ env.default-python-version }}
           pipenv sync -d
