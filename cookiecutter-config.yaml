@@ -16,7 +16,7 @@ default_context:
     
     setup_intended_audience : "\"Intended Audience :: Developers\","
     setup_additional_classifier : "\"Topic :: Software Development :: Libraries :: Application Frameworks\","
-    setup_keywords : ""
+    setup_keywords : "\"pylint\", \"code quality\", \"development\""
     setup_package_modules : "\"pylint_utils\","
     setup_entry_points : "\"pylint_utils=pylint_utils.__main__:main\","
     

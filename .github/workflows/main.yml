@@ -80,8 +80,6 @@ jobs:
       - name: Execute Tests
         run: pipenv run pytest --cov-fail-under=80 --cov --cov-branch --cov-report xml:report/coverage.xml --cov-report html:report/coverage
 
-        # ${{ matrix.python }} == ${{ env.default-python-version }} ${{ matrix.platform }} == ${{ env.default-platform }}
-
       - name: Archive coverage artifacts
         uses: actions/upload-artifact@v4
         if: ${{ matrix.python == env.default-python-version && matrix.platform == env.default-platform }}
