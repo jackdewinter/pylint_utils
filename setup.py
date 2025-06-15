@@ -1,65 +1,101 @@
 """
-Setup file for the Project Summarizer project.
+Setup file for the PyMarkdown project.
 """
 
+import os
 import runpy
 
 from setuptools import setup
 
+INSTALL_REQUIREMENT_FILE = "install-requirements.txt"
+PROJECT_README_FILE = "README.md"
+ALTERNATE_PYPI_README_FILE = "pypi.md"
 
-def __parse_requirements():
-    with open("install-requirements.txt", "r", encoding="utf-8") as requirement_file:
+
+def parse_requirements():
+    with open(f"{INSTALL_REQUIREMENT_FILE}", "r", encoding="utf-8") as requirement_file:
         lineiter = [line.strip() for line in requirement_file]
     return [line for line in lineiter if line and not line.startswith("#")]
 
 
-def __get_semantic_version():
-    version_meta = runpy.run_path("./pylint_utils/version.py")
+def get_semantic_version():
+    version_meta = runpy.run_path(f"./{MODULE_NAME}/version.py")
     return version_meta["__version__"]
 
 
-def __load_readme_file():
-    with open("README.md", "r", encoding="utf-8") as readme_file:
+def get_project_name():
+    version_meta = runpy.run_path(f"./{MODULE_NAME}/version.py")
+    return version_meta["__project_name__"]
+
+
+def get_description():
+    version_meta = runpy.run_path(f"./{MODULE_NAME}/version.py")
+    return version_meta["__description__"]
+
+
+def load_readme_file():
+    source_file = (
+        ALTERNATE_PYPI_README_FILE
+        if os.path.exists(ALTERNATE_PYPI_README_FILE)
+        else PROJECT_README_FILE
+    )
+    with open(source_file, "r", encoding="utf-8") as readme_file:
         return readme_file.read()
+
+
+# Note, the below function does not always work, so we use this until we can find out why it is not working.
+PACKAGE_MODULES = [
+    "pylint_utils",
+]
+
+
+def get_package_modules():
+    # return [
+    #     next_item[0][2:]
+    #     for next_item in os.walk(".")
+    #     if os.path.exists(os.path.join(next_item[0], ".external-package"))
+    # ]
+    return PACKAGE_MODULES
 
 
 AUTHOR = "Jack De Winter"
 AUTHOR_EMAIL = "jack.de.winter@outlook.com"
 PROJECT_URL = "https://github.com/jackdewinter/pylint_utils"
 PROJECT_URLS = {
-    "Change Log": "https://github.com/jackdewinter/pylint_utils/blob/master/changelog.md",
+    "Documentation": "https://pylint_utils.readthedocs.io/",
+    "Change Log": "https://pylint_utils.readthedocs.io/en/latest/changelog/",
 }
 
+MODULE_NAME = "pylint_utils"
 PACKAGE_NAME = "pylint_utils"
-SEMANTIC_VERSION = __get_semantic_version()
-MINIMUM_PYTHON_VERSION = "3.8.0"
+SEMANTIC_VERSION = get_semantic_version()
+MINIMUM_PYTHON_VERSION = "3.9.0"
 
-ONE_LINE_DESCRIPTION = (
-    "Various tools used to examine pylint suppressions and catalog them."
-)
-LONG_DESCRIPTION = __load_readme_file()
+ONE_LINE_DESCRIPTION = get_description()
+LONG_DESCRIPTION = load_readme_file()
 LONG_DESCRIPTION_CONTENT_TYPE = "text/markdown"
 
-KEYWORDS = [""]
+KEYWORDS = ["pylint", "code quality", "development"]
 PROJECT_CLASSIFIERS = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
-    "Programming Language :: Python :: 3.8",
+    "Intended Audience :: Developers",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Natural Language :: English",
-]
-
-PACKAGE_MODULES = [
-    "pylint_utils",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
 ]
 
 setup(
     name=PACKAGE_NAME,
     version=SEMANTIC_VERSION,
     python_requires=f">={MINIMUM_PYTHON_VERSION}",
-    install_requires=__parse_requirements(),
+    install_requires=parse_requirements(),
     author=AUTHOR,
     author_email=AUTHOR_EMAIL,
     maintainer=AUTHOR,
@@ -76,6 +112,7 @@ setup(
             "pylint_utils=pylint_utils.__main__:main",
         ],
     },
-    packages=PACKAGE_MODULES,
+    packages=get_package_modules(),
     include_package_data=True,
+    package_data={"": ["*.typed"]},
 )

@@ -6,8 +6,10 @@ import os
 import tempfile
 from test.proxypylintutils import ProxyPyLintUtils
 
+from pytest import LogCaptureFixture
 
-def test_with_dash_dash_log_level_debug(caplog):
+
+def test_with_dash_dash_log_level_debug(caplog: LogCaptureFixture) -> None:
     """
     Test to make sure we get the right effect if the `--log-level` flag
     is set for debug.
@@ -41,7 +43,7 @@ def test_with_dash_dash_log_level_debug(caplog):
     assert "Provided path 'scan' does not exist." in caplog.text
 
 
-def test_with_dash_dash_log_level_info(caplog):
+def test_with_dash_dash_log_level_info(caplog: LogCaptureFixture) -> None:
     """
     Test to make sure we get the right effect if the `--log-level` flag
     is set for info.
@@ -75,7 +77,7 @@ def test_with_dash_dash_log_level_info(caplog):
     assert "Provided path 'scan' does not exist." not in caplog.text
 
 
-def test_with_dash_dash_log_level_invalid(caplog):
+def test_with_dash_dash_log_level_invalid(caplog: LogCaptureFixture) -> None:
     """
     Test to make sure we get the right effect if the `--log-level` flag
     is set for an invalid log level.
@@ -125,7 +127,7 @@ main.py: error: argument --log-level: invalid __log_level_type value: 'invalid'
     )
 
 
-def test_with_dash_dash_log_level_info_with_file():
+def test_with_dash_dash_log_level_info_with_file() -> None:
     """
     Test to make sure we get the right effect if the `--log-level` flag
     is set for info with the results going to a file.

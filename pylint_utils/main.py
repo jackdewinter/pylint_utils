@@ -2,16 +2,16 @@
 Module to ...
 """
 
-
 import argparse
 import contextlib
 import logging
 import os
 import os.path as osp
 import runpy
-import subprocess
+import subprocess  # nosec blacklist
 import sys
 import time
+from typing import Dict, List, Optional, Tuple, cast
 
 from pylint_utils.file_scanner import FileScanner
 from pylint_utils.pylint_comment_scanner import PyLintCommentScanner
@@ -27,22 +27,22 @@ class PyLintUtils:
 
     __default_log_level = "CRITICAL"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.__version_number = PyLintUtils.__get_semantic_version()
         self.__verbose_mode = None
-        self.__display_progress = None
+        self.__display_progress = False
 
     @staticmethod
-    def __get_semantic_version():
+    def __get_semantic_version() -> str:
         file_path = __file__
         assert os.path.isabs(file_path)
         file_path = file_path.replace(os.sep, "/")
         last_index = file_path.rindex("/")
         file_path = f"{file_path[: last_index + 1]}version.py"
         version_meta = runpy.run_path(file_path)
-        return version_meta["__version__"]
+        return cast(str, version_meta["__version__"])
 
-    def __parse_arguments(self):
+    def __parse_arguments(self) -> argparse.Namespace:
         parser = argparse.ArgumentParser(
             description="Analyze any found Python files for PyLint suppressions."
         )
@@ -93,7 +93,7 @@ class PyLintUtils:
         return parser.parse_args()
 
     @classmethod
-    def _get_env(cls):
+    def _get_env(cls) -> Dict[str, str]:
         """
         Extracts the environment PYTHONPATH and appends the current sys.path to those.
         """
@@ -101,7 +101,9 @@ class PyLintUtils:
         env["PYTHONPATH"] = os.pathsep.join(sys.path)
         return env
 
-    def my_lint(self, filename, options=()):
+    def my_lint(
+        self, filename: str, options: Optional[List[str]] = None
+    ) -> Tuple[int, List[List[str]], List[str]]:
         """
         This and _gen_env were ripped off from the lint.lint() function wholesale, to provide
         for a more usable interface
@@ -123,10 +125,9 @@ class PyLintUtils:
         # xx = filename.rindex("/")
         # print("xx-->" + str(xx))
         # if xx == -1 or True:
-        if sys.platform.startswith("win"):
-            child_path = filename.replace("/", "\\")
-        else:
-            child_path = filename
+        child_path = (
+            filename.replace("/", "\\") if sys.platform.startswith("win") else filename
+        )
         parent_path = "."
         # else:
         #     child_path = filename[xx + 1 :]
@@ -139,7 +140,7 @@ class PyLintUtils:
         run_cmd = "import sys; from pylint.lint import Run; Run(sys.argv[1:])"
         # print("cp-->" + str(child_path))
         # print("pp-->" + str(parent_path))
-        cmd = [
+        cmd: List[str] = [
             sys.executable,
             "-c",
             run_cmd,
@@ -148,14 +149,18 @@ class PyLintUtils:
             "-r",
             "n",
             child_path,
-        ] + list(options)
+        ] + list(options or [])
         return self.__quack(cmd, parent_path)
 
-    # pylint: disable=broad-except
-    def __quack(self, cmd, parent_path):
+    # pylint: disable=broad-exception-caught
+    def __quack(
+        self, cmd: List[str], parent_path: str
+    ) -> Tuple[int, List[List[str]], List[str]]:
         return_code = -1
+        found_suppressions: List[List[str]] = []
+        error_lines: List[str] = []
         try:
-            with subprocess.Popen(
+            with subprocess.Popen(  # nosec subprocess_without_shell_equals_true
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -170,7 +175,8 @@ class PyLintUtils:
                     poll_return_code = process.poll()
 
                 found_suppressions = []
-                was_any_fatal = False
+                was_any_fatal = poll_return_code in [1, 32]
+                assert process.stdout is not None
                 for line in process.stdout:
                     # print("out:" + line + ":")
 
@@ -180,10 +186,12 @@ class PyLintUtils:
 
                     # modify the file name thats output to reverse the path traversal we made
                     parts = line.split(":")
-                    if not was_any_fatal:
-                        was_any_fatal = (
-                            parts[0].lower() == "fatal" or parts[1].lower() == "fatal"
-                        )
+                    if len(parts) > 3 and parts[3].strip() == "F0011":
+                        raise ValueError("Configuration file was not validly formed.")
+
+                    was_any_fatal = was_any_fatal or (
+                        parts[0].lower() == "fatal" or parts[1].lower() == "fatal"
+                    )
                     found_suppressions.append(parts)
 
                 # if was_any_fatal:
@@ -191,21 +199,24 @@ class PyLintUtils:
                 # else:
                 #     print(f"Pylint returned normal:{process.returncode}:{cmd}")
                 # for line in process.stdout:
-                #     print("out:" + line + ":")
-                # for line in process.stderr:
-                #     print("err:" + line + ":")
+                #     print(f"out:{line}:")
+                assert process.stderr is not None
+                error_lines.extend(iter(process.stderr))
                 return_code = process.returncode
         except Exception as exception:
-            print(f"Pylint returned exception:{exception}")
+            print(f"Pylint returned exception: {exception}")
+            return_code = 1
         # print(f"cmd:{cmd}:")
         # print(f"return_code:{return_code}:")
         # print(f"found_suppressions:{found_suppressions}:")
-        return return_code, found_suppressions
+        return return_code, found_suppressions, error_lines
 
-    # pylint: enable=broad-except
+    # pylint: enable=broad-exception-caught
 
     @classmethod
-    def __remove_pylint_suppress_lines(cls, content_lines, start_line, end_line):
+    def __remove_pylint_suppress_lines(
+        cls, content_lines: List[str], start_line: int, end_line: int
+    ) -> List[str]:
         modified_content = content_lines[:]
         modified_content[start_line] = ""
         modified_content[end_line] = ""
@@ -218,8 +229,11 @@ class PyLintUtils:
         # Remove any trailing blank lines
         while not last_line:
             new_last_line = modified_content[last_line_index - 1]
-            if new_last_line.endswith("\n"):
-                new_last_line = new_last_line[:-1].strip()
+            new_last_line = (
+                new_last_line[:-1].strip()
+                if new_last_line.endswith("\n")
+                else new_last_line
+            )
             if not new_last_line:
                 del modified_content[-1]
             last_line_index -= 1
@@ -230,35 +244,49 @@ class PyLintUtils:
             del modified_content[-1]
         return modified_content
 
-    def __validate_original_scans_cleanly(self, next_file, options):
+    def __validate_original_scans_cleanly(
+        self, next_file: str, options: List[str]
+    ) -> int:
 
         print(f"Verifying {next_file} scans cleanly without modifications.")
-        scan_return_code, found_suppressions = self.my_lint(next_file, options=options)
+        scan_return_code, found_suppressions, error_lines = self.my_lint(
+            next_file, options=options
+        )
         if scan_return_code:
 
-            unique_found_suppressions = []
-            for next_item in found_suppressions:
-                next_item = next_item[1].strip()
-                if next_item not in unique_found_suppressions:
-                    unique_found_suppressions.append(next_item)
-            unique_found_suppressions.sort()
+            xfound_suppressions = sorted(
+                {next_item[1].strip() for next_item in found_suppressions}
+            )
 
             suppressions_report = ""
-            for next_item in enumerate(unique_found_suppressions):
-                if next_item[0]:
+            for next_itemy in enumerate(xfound_suppressions):
+                if next_itemy[0]:
                     suppressions_report += ", "
-                suppressions_report += next_item[1]
+                xx = next_itemy[1]
+                suppressions_report += xx
 
-            print(
-                f"  Baseline PyLint scan found unsuppressed warnings: {suppressions_report}"
-            )
+            error_output = "".join(f"\n  ERR:{line.rstrip()}" for line in error_lines)
+
+            if suppressions_report:
+                print(
+                    f"  Baseline PyLint scan found unsuppressed warnings: {suppressions_report}"
+                )
+            if error_output:
+                print(
+                    f"  Baseline PyLint scan found reported error output: {error_output}"
+                )
             print("  Fix all errors before scanning again.")
         return scan_return_code
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, too-many-locals
     def __scan_modified_file(
-        self, content_lines, logged_properties, next_file, new_file_name, options
-    ):
+        self,
+        content_lines: List[str],
+        logged_properties: Tuple[int, int, str],
+        next_file: str,
+        new_file_name: str,
+        options: List[str],
+    ) -> Tuple[int, List[List[str]]]:
 
         start_line = int(logged_properties[0]) - 1
         end_line = int(logged_properties[1]) - 1
@@ -269,14 +297,16 @@ class PyLintUtils:
         self.__emit_scan_item_header(next_file, logged_properties)
 
         modified_content_return_code = 1
-        modified_suppressions = None
+        modified_suppressions: List[List[str]] = []
         try:
             with open(new_file_name, "wt", encoding="utf-8") as outfile:
                 outfile.writelines(modified_content)
 
-            modified_content_return_code, modified_suppressions = self.my_lint(
-                new_file_name, options=options
-            )
+            (
+                modified_content_return_code,
+                modified_suppressions,
+                error_lines,
+            ) = self.my_lint(new_file_name, options=options)
             if modified_content_return_code and modified_content_return_code in [
                 1,
                 32,
@@ -286,44 +316,57 @@ class PyLintUtils:
                     if modified_content_return_code == 1
                     else "Usage Error"
                 )
-                if self.__verbose_mode:
-                    print(
-                        f"    Modified file scan of {next_file} failed: {translated_error_name}"
-                    )
-                else:
-                    print(f"    Modified file scan failed: {translated_error_name}")
+                print(
+                    f"    Modified file scan of {next_file} failed: {translated_error_name}"
+                )
+
+                # Since an error was reported, we expect at least one error lie from stderr.
+                if error_lines:
+                    err_output = "".join(f"\n    ERR:{x}" for x in error_lines)
+                    print(err_output)
             else:
                 modified_content_return_code = 0
+        except OSError as this_exception:
+            print(
+                f"    Modified file scan of {next_file} failed during creation: {this_exception}"
+            )
         finally:
             if os.path.exists(new_file_name):
                 os.remove(new_file_name)
 
         return modified_content_return_code, modified_suppressions
 
-    # pylint: enable=too-many-arguments
+    # pylint: enable=too-many-arguments, too-many-locals
 
     @classmethod
     def __search_for_suppression_in_returned_list(
-        cls, logged_properties, modified_suppressions
-    ):
+        cls,
+        logged_properties: Tuple[int, int, str],
+        modified_suppressions: List[List[str]],
+    ) -> bool:
 
         did_match = False
-        suppression_to_test = logged_properties[2]
+        suppression_to_test: str = logged_properties[2]
+        next_item: List[str] = []
         for next_item in modified_suppressions:
-            next_item = next_item[1].strip()
-            if next_item == suppression_to_test:
+            next_itemx = next_item[1].strip()
+            if next_itemx == suppression_to_test:
                 did_match = True
                 break
         return did_match
 
-    def __emit_scan_item_header(self, next_file, logged_properties):
+    def __emit_scan_item_header(
+        self, next_file: str, logged_properties: Tuple[int, int, str]
+    ) -> None:
 
         if self.__verbose_mode:
             print(
                 f"  Verifying suppression '{logged_properties[2]}' from file {next_file}, line {logged_properties[0]}"
             )
 
-    def __emit_dot_tracker_header(self, disable_enabled_log):
+    def __emit_dot_tracker_header(
+        self, disable_enabled_log: List[Tuple[int, int, str]]
+    ) -> None:
 
         if self.__display_progress:
             suppression_count = len(disable_enabled_log)
@@ -331,11 +374,13 @@ class PyLintUtils:
             print("".rjust(suppression_count, "."), end="")
             print("".rjust(suppression_count, "\b"), end="", flush=True)
 
-    def __emit_dot_tracker_item(self, did_match):
+    def __emit_dot_tracker_item(self, did_match: bool) -> None:
         if self.__display_progress:
             print("v" if did_match else "U", end="", flush=True)
 
-    def __emit_dot_tracker_footer(self, unused_suppression_tuples):
+    def __emit_dot_tracker_footer(
+        self, unused_suppression_tuples: List[Tuple[str, int, str]]
+    ) -> None:
         if self.__display_progress:
             print(
                 f" - {len(unused_suppression_tuples)} Found"
@@ -343,10 +388,13 @@ class PyLintUtils:
                 else ""
             )
 
-    # pylint: disable=too-many-locals
     def __scan_file_for_unused_suppressions(
-        self, disable_enabled_log, next_file, content_lines, args
-    ):
+        self,
+        disable_enabled_log: List[Tuple[int, int, str]],
+        next_file: str,
+        content_lines: List[str],
+        args: argparse.Namespace,
+    ) -> Tuple[int, Optional[List[Tuple[str, int, str]]]]:
 
         options = ["--score=n"]
         if args.config_file:
@@ -363,56 +411,87 @@ class PyLintUtils:
 
         self.__emit_dot_tracker_header(disable_enabled_log)
 
-        unused_suppression_tuples = []
-        last_modified_suppressions = None
-        last_logged_properties = (None, None)
+        unused_suppression_tuples: List[Tuple[str, int, str]] = []
+        last_modified_suppressions: List[List[str]] = []
+        last_logged_properties: Tuple[int, int, str] = (-1, -1, "")
         for _, logged_properties in enumerate(disable_enabled_log, start=1):
 
-            if (
-                last_logged_properties
-                and last_logged_properties[0] == logged_properties[0]
-                and last_logged_properties[1] == logged_properties[1]
-            ):
-                modified_suppressions = last_modified_suppressions
-                self.__emit_scan_item_header(next_file, logged_properties)
-            else:
-                (
-                    modified_scan_return_code,
-                    modified_suppressions,
-                ) = self.__scan_modified_file(
-                    content_lines, logged_properties, next_file, new_file_name, options
-                )
-            if modified_scan_return_code:
-                if self.__display_progress:
-                    print("")
+            ff, last_logged_properties, last_modified_suppressions = self.__xyz(
+                logged_properties,
+                last_logged_properties,
+                next_file,
+                new_file_name,
+                options,
+                unused_suppression_tuples,
+                last_modified_suppressions,
+                content_lines,
+            )
+            if not ff:
                 return 1, None
 
-            last_modified_suppressions = modified_suppressions
-            last_logged_properties = logged_properties
-
-            did_match = self.__search_for_suppression_in_returned_list(
-                logged_properties, modified_suppressions
-            )
-            if not did_match:
-                start_line = int(logged_properties[0]) - 1
-                suppression_to_test = logged_properties[2]
-                new_tuple = (next_file, start_line, suppression_to_test)
-                unused_suppression_tuples.append(new_tuple)
-
-            self.__emit_dot_tracker_item(did_match)
-
         self.__emit_dot_tracker_footer(unused_suppression_tuples)
-        return 0, sorted(
-            unused_suppression_tuples,
-            key=lambda x: f"{x[0]}:" + str(x[1]).rjust(7, "0"),
+
+        df = unused_suppression_tuples
+        df.sort(key=lambda x: f"{x[0]}:" + str(x[1]).rjust(7, "0"))
+
+        return 0, df
+
+    # pylint: disable=too-many-arguments
+    def __xyz(
+        self,
+        logged_properties: Tuple[int, int, str],
+        last_logged_properties: Tuple[int, int, str],
+        next_file: str,
+        new_file_name: str,
+        options: List[str],
+        unused_suppression_tuples: List[Tuple[str, int, str]],
+        last_modified_suppressions: List[List[str]],
+        content_lines: List[str],
+    ) -> Tuple[bool, Tuple[int, int, str], List[List[str]]]:
+        modified_scan_return_code = 0
+        modified_suppressions: List[List[str]] = []
+        if (
+            last_logged_properties
+            and last_logged_properties[0] == logged_properties[0]
+            and last_logged_properties[1] == logged_properties[1]
+        ):
+            modified_suppressions = last_modified_suppressions
+            self.__emit_scan_item_header(next_file, logged_properties)
+        else:
+            x = self.__scan_modified_file(
+                content_lines, logged_properties, next_file, new_file_name, options
+            )
+            modified_scan_return_code = x[0]
+            modified_suppressions = x[1]
+        if modified_scan_return_code:
+            # print("self.__display_progress>>" + str(self.__display_progress))
+            if self.__display_progress:
+                print("")
+            return False, last_logged_properties, last_modified_suppressions
+
+        last_modified_suppressions = modified_suppressions
+        last_logged_properties = logged_properties
+
+        did_match = self.__search_for_suppression_in_returned_list(
+            logged_properties, modified_suppressions
         )
+        if not did_match:
+            start_line = int(logged_properties[0]) - 1
+            suppression_to_test = logged_properties[2]
+            new_tuple = (next_file, start_line, suppression_to_test)
+            unused_suppression_tuples.append(new_tuple)
 
-    # pylint: enable=too-many-locals
+        self.__emit_dot_tracker_item(did_match)
+        return True, last_logged_properties, last_modified_suppressions
 
-    def __verify_pylint_suppressions(self, args, pylint_scanner):
+    # pylint: enable=too-many-arguments
+
+    def __verify_pylint_suppressions(
+        self, args: argparse.Namespace, pylint_scanner: PyLintCommentScanner
+    ) -> int:
 
         return_code = 0
-        all_unused_suppression_tuples = []
+        all_unused_suppression_tuples: List[Tuple[str, int, str]] = []
         for next_file in pylint_scanner.scan_map:
             disable_enabled_log_for_file, python_file_content = pylint_scanner.scan_map[
                 next_file
@@ -439,13 +518,15 @@ class PyLintUtils:
                 f"\n{len(all_unused_suppression_tuples)} unused PyLint suppressions found."
             )
             for i in all_unused_suppression_tuples:
-                print(f"{i[0]}:{i[1]+1}: Unused suppression: {i[2]}")
+                print(f"{i[0]}:{i[1] + 1}: Unused suppression: {i[2]}")
             return_code = 2
-        else:
+        elif return_code == 0:
             print("\nNo unused PyLint suppressions found.")
         return return_code
 
-    def __process_files_to_scan(self, args, files_to_scan):
+    def __process_files_to_scan(
+        self, args: argparse.Namespace, files_to_scan: List[str]
+    ) -> int:
         return_code = 0
         with contextlib.suppress(KeyboardInterrupt):
             pylint_scanner = PyLintCommentScanner()
@@ -458,19 +539,20 @@ class PyLintUtils:
                 return_code = 1
             elif args.report_file:
                 return_code = pylint_scanner.create_report(args)
-            elif args.scan_suppressions:
+            else:
                 return_code = self.__verify_pylint_suppressions(args, pylint_scanner)
         return return_code
 
-    def main(self):
+    def main(self) -> None:
         """
         Main entrance point.
         """
         args = self.__parse_arguments()
         self.__verbose_mode = args.verbose_mode
-        self.__display_progress = (
-            sys.stdout.isatty() or args.x_test_display
-        ) and not self.__verbose_mode
+        self.__display_progress = cast(
+            bool,
+            (sys.stdout.isatty() or args.x_test_display) and not self.__verbose_mode,
+        )
 
         return_code = 0
         try:
@@ -479,14 +561,14 @@ class PyLintUtils:
             files_to_scan, error_scanning_files = FileScanner().determine_files_to_scan(
                 args
             )
-            if error_scanning_files:
-                return_code = 1
-            else:
-                return_code = FileScanner.handle_list_files_if_argument_present(
+            return_code = 1
+            if not error_scanning_files:
+                xreturn_code = FileScanner.handle_list_files_if_argument_present(
                     args, files_to_scan
                 )
-                if return_code is None:
-                    return_code = self.__process_files_to_scan(args, files_to_scan)
+                if xreturn_code is None:
+                    xreturn_code = self.__process_files_to_scan(args, files_to_scan)
+                return_code = xreturn_code
         finally:
             SimpleLogging.terminate_logging()
         sys.exit(return_code)

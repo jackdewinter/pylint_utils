@@ -2,8 +2,10 @@
 Module to provide a scanner for PyLint suppression comments.
 """
 
+import argparse
 import json
 import sys
+from typing import Any, Dict, List, Tuple
 
 
 class PyLintCommentScanner:
@@ -17,24 +19,25 @@ class PyLintCommentScanner:
     __pylint_suppression_enable = "enable="
     __too_many_lines_item = "too-many-lines"
 
-    def __init__(self):
-        self.__scan_map = {}
-        self.__current_file_name = None
-        self.__errors_reported = None
-        self.__disabled_by_file_name_map = None
+    def __init__(self) -> None:
+        self.__scan_map: Dict[str, Tuple[List[Tuple[int, int, str]], List[str]]] = {}
+        self.__current_file_name = ""
+        self.__errors_reported = -1
+        self.__disabled_by_file_name_map: Dict[str, Dict[str, int]] = {}
 
     @property
-    def scan_map(self):
+    def scan_map(self) -> Dict[str, Tuple[List[Tuple[int, int, str]], List[str]]]:
         """
         Scan map of each enabled and disabled pylint rule.
         """
         return self.__scan_map
 
-    def analyze_python_files_for_pylint_comments(self, args, files_to_scan):
+    def analyze_python_files_for_pylint_comments(
+        self, args: argparse.Namespace, files_to_scan: List[str]
+    ) -> int:
         """
         Analyze the specifed python files, looking for mismatched PyLint comments lines.
         """
-
         self.__disabled_by_file_name_map = {}
         total_error_count = 0
         for next_file in files_to_scan:
@@ -59,15 +62,17 @@ class PyLintCommentScanner:
 
         return total_error_count
 
-    def __check_contents_of_python_file(self, file_name, file_contents):
+    def __check_contents_of_python_file(
+        self, file_name: str, file_contents: List[str]
+    ) -> Tuple[Dict[str, int], int, List[Tuple[int, int, str]]]:
 
         self.__current_file_name = file_name
         self.__errors_reported = 0
 
-        active_items_map = {}
         line_count = 1
-        total_disable_counts = {}
-        disable_enabled_log = []
+        total_disable_counts: Dict[str, int] = {}
+        disable_enabled_log: List[Tuple[int, int, str]] = []
+        active_items_map: Dict[str, int] = {}
         for next_line in file_contents:
             stripped_next_line = next_line.strip()
             if stripped_next_line.startswith(
@@ -107,8 +112,7 @@ class PyLintCommentScanner:
                 ):
                     self.__report_warning(
                         line_count,
-                        "Pylint suppression string "
-                        + f"'{PyLintCommentScanner.__pylint_suppression_disable_next}' is not supported.",
+                        f"Pylint suppression string '{PyLintCommentScanner.__pylint_suppression_disable_next}' is not supported.",
                     )
                 else:
                     self.__report_error(
@@ -126,10 +130,12 @@ class PyLintCommentScanner:
         return total_disable_counts, self.__errors_reported, disable_enabled_log
 
     @classmethod
-    def __decompose_valid_pylint_line(cls, directive_text, directive_action):
+    def __decompose_valid_pylint_line(
+        cls, directive_text: str, directive_action: str
+    ) -> List[str]:
         remaining_line = directive_text[len(directive_action) :]
 
-        collected_items = []
+        collected_items: List[str] = []
         next_comma_index = remaining_line.find(",")
         while next_comma_index != -1:
             part_before_comma = remaining_line[:next_comma_index].strip()
@@ -140,16 +146,20 @@ class PyLintCommentScanner:
 
         return collected_items
 
-    def __report_error(self, line_count, error_string):
+    def __report_error(self, line_count: int, error_string: str) -> None:
         print(f"{self.__current_file_name}({line_count}): {error_string}")
         self.__errors_reported += 1
 
-    def __report_warning(self, line_count, warning_string):
+    def __report_warning(self, line_count: int, warning_string: str) -> None:
         print(f"{self.__current_file_name}({line_count}): {warning_string}")
 
     def __record_disabled_items(
-        self, active_items_map, line_count, total_disable_counts, list_of_items
-    ):
+        self,
+        active_items_map: Dict[str, int],
+        line_count: int,
+        total_disable_counts: Dict[str, int],
+        list_of_items: List[str],
+    ) -> None:
         for next_item in list_of_items:
             lowercase_next_item = next_item.lower()
             if lowercase_next_item == PyLintCommentScanner.__too_many_lines_item:
@@ -162,16 +172,17 @@ class PyLintCommentScanner:
             else:
                 active_items_map[lowercase_next_item] = line_count
 
-            if next_item in total_disable_counts:
-                current_count = total_disable_counts[next_item]
-            else:
-                current_count = 0
+            current_count = total_disable_counts.get(next_item, 0)
             current_count += 1
             total_disable_counts[next_item] = current_count
 
     def __record_enabled_items(
-        self, active_items_map, line_count, list_of_items, disable_enabled_log
-    ):
+        self,
+        active_items_map: Dict[str, int],
+        line_count: int,
+        list_of_items: List[str],
+        disable_enabled_log: List[Tuple[int, int, str]],
+    ) -> None:
         for next_item in list_of_items:
             lowercase_next_item = next_item.lower()
             if lowercase_next_item == PyLintCommentScanner.__too_many_lines_item:
@@ -188,8 +199,10 @@ class PyLintCommentScanner:
                 disable_enabled_log.append(new_entry)
 
     @classmethod
-    def __create_report_map(cls, disabled_by_file_name_map):
-        total_counts = {}
+    def __create_report_map(
+        cls, disabled_by_file_name_map: Dict[str, Dict[str, int]]
+    ) -> Dict[str, Any]:
+        total_counts: Dict[str, int] = {}
         for file_name, next_file_map in disabled_by_file_name_map.items():
             next_file_map = disabled_by_file_name_map[file_name]
 
@@ -208,7 +221,7 @@ class PyLintCommentScanner:
             "disables-by-name": total_counts,
         }
 
-    def create_report(self, args):
+    def create_report(self, args: argparse.Namespace) -> int:
         """
         Given that the `analyze_python_files_for_pylint_comments` function was already
         executed, generate a json report of what was found.

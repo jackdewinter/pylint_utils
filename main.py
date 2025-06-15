@@ -1,6 +1,7 @@
 """
 Module to provide for a simple bootstrap for the project.
 """
+
 from pylint_utils.main import PyLintUtils
 
 
@@ -9,7 +10,7 @@ class Main:
     Class to provide for a simple bootstrap for the project.
     """
 
-    def main(self):
+    def main(self) -> None:
         """
         Main entrance point.
         """

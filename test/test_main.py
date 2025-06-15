@@ -1,15 +1,22 @@
 """
 Module to provide tests related to the basic parts of the scanner.
 """
+
 import os
 import runpy
 import sys
 import tempfile
 from test.proxypylintutils import ProxyPyLintUtils
-from test.utils import assert_if_strings_different
+from test.test_detect_unused import write_temporary_configuration
+from test.utils import (
+    ACTIVE_LOCK_FILE_NAME,
+    assert_if_strings_different,
+    obtain_multiprocess_lock,
+)
+from typing import List
 
 
-def test_dash_dash_version():
+def test_dash_dash_version() -> None:
     """
     Test to make sure we get the correct response if 'version' is supplied.
     """
@@ -22,10 +29,8 @@ def test_dash_dash_version():
     semantic_version = version_meta["__version__"]
 
     expected_return_code = 0
-    expected_output = """{version}
-""".replace(
-        "{version}", semantic_version
-    )
+    expected_output = f"""{semantic_version}
+"""
     expected_error = ""
 
     # Act
@@ -37,14 +42,14 @@ def test_dash_dash_version():
     )
 
 
-def test_with_no_parameters():
+def test_with_no_parameters() -> None:
     """
     Test to make sure we get the simple information if no parameters are supplied.
     """
 
     # Arrange
     scanner = ProxyPyLintUtils()
-    supplied_arguments = []
+    supplied_arguments: List[str] = []
 
     expected_return_code = 2
     expected_output = ""
@@ -66,7 +71,7 @@ main.py: error: the following arguments are required: path
     )
 
 
-def test_with_no_parameters_through_module():
+def test_with_no_parameters_through_module() -> None:
     """
     Test to make sure we get the simple information if no parameters are supplied,
     but through the module interface.
@@ -74,7 +79,7 @@ def test_with_no_parameters_through_module():
 
     # Arrange
     scanner = ProxyPyLintUtils(use_module=True)
-    supplied_arguments = []
+    supplied_arguments: List[str] = []
 
     expected_return_code = 2
     expected_output = ""
@@ -96,7 +101,7 @@ __main.py__: error: the following arguments are required: path
     )
 
 
-def test_with_no_parameters_through_main():
+def test_with_no_parameters_through_main() -> None:
     """
     Test to make sure we get the simple information if no parameters are supplied,
     but through the main interface.
@@ -104,7 +109,7 @@ def test_with_no_parameters_through_main():
 
     # Arrange
     scanner = ProxyPyLintUtils(use_main=True)
-    supplied_arguments = []
+    supplied_arguments: List[str] = []
 
     expected_return_code = 2
     expected_output = ""
@@ -126,7 +131,7 @@ main.py: error: the following arguments are required: path
     )
 
 
-def test_dash_dash_list_files():
+def test_dash_dash_list_files() -> None:
     """
     Test to make sure we can do a simple listing of files
     """
@@ -145,7 +150,9 @@ test/resources/balanced_file_clean_with_extra_last.py
 test/resources/balanced_file_disable_next.py
 test/resources/balanced_file_double_disable.py
 test/resources/balanced_file_no_suppression.py
+test/resources/balanced_file_not_python.py
 test/resources/balanced_file_with_too_many_lines.py
+test/resources/balanced_inner_file.py
 test/resources/clean_file.py
 test/resources/unbalanced_file_double_disable.py
 test/resources/unbalanced_file_double_enable.py
@@ -165,29 +172,42 @@ test/resources/yet_another_bad_file_with_bad_end.py"""
     )
 
 
-def test_scan_balanced_file():
+def test_scan_balanced_file() -> None:
     """
     Test to make sure that if we scan a file that is properly suppressed, no issues.
     """
 
     # Arrange
-    scanner = ProxyPyLintUtils()
-    supplied_arguments = ["test/resources/balanced_file.py"]
+    warning_to_suppress = ""
+    configuration_file = None
+    try:
+        configuration_file = write_temporary_configuration(warning_to_suppress)
+        scanner = ProxyPyLintUtils()
+        supplied_arguments = [
+            "--config",
+            configuration_file,
+            "test/resources/balanced_file.py",
+        ]
 
-    expected_return_code = 0
-    expected_output = ""
-    expected_error = ""
+        expected_return_code = 1
+        expected_output = """Verifying test/resources/balanced_file.py scans cleanly without modifications.
+  Baseline PyLint scan found unsuppressed warnings: missing-module-docstring
+  Fix all errors before scanning again."""
+        expected_error = ""
 
-    # Act
-    execute_results = scanner.invoke_main(arguments=supplied_arguments)
+        # Act
+        execute_results = scanner.invoke_main(arguments=supplied_arguments)
 
-    # Assert
-    execute_results.assert_results(
-        expected_output, expected_error, expected_return_code
-    )
+        # Assert
+        execute_results.assert_results(
+            expected_output, expected_error, expected_return_code
+        )
+    finally:
+        if configuration_file and os.path.exists(configuration_file):
+            os.remove(configuration_file)
 
 
-def test_scan_balanced_file_no_suppressions():
+def test_scan_balanced_file_no_suppressions() -> None:
     """
     Test to make sure that if we scan that has pylint issues but has not been scanned
     yet by pylint, there are no issues as none have been reported yet.
@@ -198,7 +218,7 @@ def test_scan_balanced_file_no_suppressions():
     supplied_arguments = ["test/resources/balanced_file_no_suppression.py"]
 
     expected_return_code = 0
-    expected_output = ""
+    expected_output = "No unused PyLint suppressions found."
     expected_error = ""
 
     # Act
@@ -210,30 +230,71 @@ def test_scan_balanced_file_no_suppressions():
     )
 
 
-def test_scan_balanced_file_with_too_many_lines():
+def test_scan_balanced_file_with_too_many_lines() -> None:
     """
     Test to make sure that scanning a file that is balanced except for the
     `too_many_lines` suppression is okay.
     """
 
-    # Arrange
-    scanner = ProxyPyLintUtils()
-    supplied_arguments = ["test/resources/balanced_file_with_too_many_lines.py"]
+    with obtain_multiprocess_lock(ACTIVE_LOCK_FILE_NAME):
+        # Arrange
+        scanner = ProxyPyLintUtils()
+        supplied_arguments = ["test/resources/balanced_file_with_too_many_lines.py"]
 
-    expected_return_code = 0
-    expected_output = ""
-    expected_error = ""
+        expected_return_code = 0
+        expected_output = """Verifying test/resources/balanced_file_with_too_many_lines.py scans cleanly without modifications.
 
-    # Act
-    execute_results = scanner.invoke_main(arguments=supplied_arguments)
+No unused PyLint suppressions found."""
+        expected_error = ""
 
-    # Assert
-    execute_results.assert_results(
-        expected_output, expected_error, expected_return_code
-    )
+        # Act
+        execute_results = scanner.invoke_main(arguments=supplied_arguments)
+
+        # Assert
+        execute_results.assert_results(
+            expected_output, expected_error, expected_return_code
+        )
 
 
-def test_scan_unbalanced_file_no_disable_but_enable():
+def test_scan_balanced_file_with_too_many_lines_xx() -> None:
+    """
+    Test to make sure that scanning a file that is balanced except for the
+    `too_many_lines` suppression is okay.
+    """
+
+    with obtain_multiprocess_lock(ACTIVE_LOCK_FILE_NAME):
+        # Arrange
+        warning_to_suppress = "missing-function-docstring, missing-module-docstring, trailing-newlines, trailing-whitespace"
+        configuration_file = None
+        try:
+            configuration_file = write_temporary_configuration(warning_to_suppress)
+            scanner = ProxyPyLintUtils()
+            supplied_arguments = [
+                "--config",
+                configuration_file,
+                "-s",
+                "test/resources/inner/b1.py",
+            ]
+
+            expected_return_code = 0
+            expected_output = """Verifying test/resources/inner/b1.py scans cleanly without modifications.
+
+No unused PyLint suppressions found."""
+            expected_error = ""
+
+            # Act
+            execute_results = scanner.invoke_main(arguments=supplied_arguments)
+
+            # Assert
+            execute_results.assert_results(
+                expected_output, expected_error, expected_return_code
+            )
+        finally:
+            if configuration_file and os.path.exists(configuration_file):
+                os.remove(configuration_file)
+
+
+def test_scan_unbalanced_file_no_disable_but_enable() -> None:
     """
     Test to make sure that scanning a file that has an enable suppression but
     not a disable suppression is reported as an issue.
@@ -245,38 +306,9 @@ def test_scan_unbalanced_file_no_disable_but_enable():
     supplied_arguments = [file_path_to_scan]
 
     expected_return_code = 1
-    expected_output = """{path}(11): Pylint error 'too-many-arguments' was not disabled, so enable is ignored.
+    expected_output = f"""{file_path_to_scan}(11): Pylint error 'too-many-arguments' was not disabled, so enable is ignored.
 
 Scanned python files contained 1 PyLint suppression error(s).
-""".replace(
-        "{path}", file_path_to_scan
-    )
-    expected_error = ""
-
-    # Act
-    execute_results = scanner.invoke_main(arguments=supplied_arguments)
-
-    # Assert
-    execute_results.assert_results(
-        expected_output, expected_error, expected_return_code
-    )
-
-
-def test_scan_unbalanced_file_double_disable():
-    """
-    Test to make sure that scanning a file that has multiple disable suppression
-    is reported as an issue.
-    """
-
-    # Arrange
-    scanner = ProxyPyLintUtils()
-    supplied_arguments = ["test/resources/unbalanced_file_double_disable.py"]
-
-    expected_return_code = 1
-    expected_output = """test/resources/unbalanced_file_double_disable.py(12): Pylint error 'too-many-arguments' was already disabled.
-test/resources/unbalanced_file_double_disable.py(15): Pylint error 'too-many-arguments' was disabled, but not re-enabled.
-
-Scanned python files contained 2 PyLint suppression error(s).
 """
     expected_error = ""
 
@@ -289,7 +321,35 @@ Scanned python files contained 2 PyLint suppression error(s).
     )
 
 
-def test_scan_unbalanced_file_no_enable_but_disable():
+def test_scan_unbalanced_file_double_disable() -> None:
+    """
+    Test to make sure that scanning a file that has multiple disable suppression
+    is reported as an issue.
+    """
+
+    with obtain_multiprocess_lock(ACTIVE_LOCK_FILE_NAME):
+        # Arrange
+        scanner = ProxyPyLintUtils()
+        supplied_arguments = ["test/resources/unbalanced_file_double_disable.py"]
+
+        expected_return_code = 1
+        expected_output = """test/resources/unbalanced_file_double_disable.py(12): Pylint error 'too-many-arguments' was already disabled.
+test/resources/unbalanced_file_double_disable.py(15): Pylint error 'too-many-arguments' was disabled, but not re-enabled.
+
+Scanned python files contained 2 PyLint suppression error(s).
+"""
+        expected_error = ""
+
+        # Act
+        execute_results = scanner.invoke_main(arguments=supplied_arguments)
+
+        # Assert
+        execute_results.assert_results(
+            expected_output, expected_error, expected_return_code
+        )
+
+
+def test_scan_unbalanced_file_no_enable_but_disable() -> None:
     """
     Test to make sure that scanning a file that has a disable suppression but
     not an enable suppression is reported as an issue.
@@ -315,7 +375,7 @@ Scanned python files contained 1 PyLint suppression error(s).
     )
 
 
-def test_scan_unbalanced_file_double_enable():
+def test_scan_unbalanced_file_double_enable() -> None:
     """
     Test to make sure that scanning a file that has a double enable suppression
     is reported as an issue.
@@ -341,7 +401,7 @@ Scanned python files contained 1 PyLint suppression error(s).
     )
 
 
-def test_scan_unbalanced_file_enable_without_disable():
+def test_scan_unbalanced_file_enable_without_disable() -> None:
     """
     Test to make sure that scanning a file that has an enable suppression for something
     that was not disabled is reported as an issue.
@@ -367,7 +427,7 @@ Scanned python files contained 1 PyLint suppression error(s).
     )
 
 
-def test_scan_unbalanced_file_enable_without_disable_and_verbose():
+def test_scan_unbalanced_file_enable_without_disable_and_verbose() -> None:
     """
     Test to make sure that scanning a file that has an enable suppression for something
     that was not disabled is reported as an issue, with verbose enabled.
@@ -398,7 +458,7 @@ Scanned python files contained 1 PyLint suppression error(s).
     )
 
 
-def test_scan_balanced_file_disable_next():
+def test_scan_balanced_file_disable_next() -> None:
     """
     Test to make sure that scanning a file that has an enable suppression for something
     that was not disabled is reported as an issue.
@@ -410,6 +470,8 @@ def test_scan_balanced_file_disable_next():
 
     expected_return_code = 0
     expected_output = """test/resources/balanced_file_disable_next.py(1): Pylint suppression string 'disable-next=' is not supported.
+
+No unused PyLint suppressions found.    
 """
     expected_error = ""
 
@@ -422,7 +484,7 @@ def test_scan_balanced_file_disable_next():
     )
 
 
-def test_scan_bad_suppression():
+def test_scan_bad_suppression() -> None:
     """
     Test to make sure that scanning a file that has a bad suppression directive
     is reported as an issue.
@@ -447,7 +509,7 @@ Scanned python files contained 1 PyLint suppression error(s)."""
     )
 
 
-def test_scan_double_suppressions():
+def test_scan_double_suppressions() -> None:
     """
     Test to make sure that multiple suppressions of the same block can be specified
     together on one line (disable) or on separate lines (enable).
@@ -458,7 +520,9 @@ def test_scan_double_suppressions():
     supplied_arguments = ["test/resources/balanced_file_double_disable.py"]
 
     expected_return_code = 0
-    expected_output = ""
+    expected_output = """Verifying test/resources/balanced_file_double_disable.py scans cleanly without modifications.
+
+No unused PyLint suppressions found."""
     expected_error = ""
 
     # Act
@@ -470,12 +534,13 @@ def test_scan_double_suppressions():
     )
 
 
-def test_scan_balanced_file_and_report():
+def test_scan_balanced_file_and_report() -> None:
     """
     Test to make sure that we can generate a report if we have a balanced file.
     """
 
     # Arrange
+    report_file_name = ""
     try:
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             report_file_name = temp_file.name
@@ -494,11 +559,13 @@ def test_scan_balanced_file_and_report():
         expected_report = """{
     "disables-by-file": {
         "test/resources/balanced_file.py": {
-            "too-many-arguments": 1
+            "too-many-arguments": 1,
+            "too-many-positional-arguments": 1
         }
     },
     "disables-by-name": {
-        "too-many-arguments": 1
+        "too-many-arguments": 1,
+        "too-many-positional-arguments": 1
     }
 }"""
 
@@ -519,7 +586,7 @@ def test_scan_balanced_file_and_report():
             os.remove(report_file_name)
 
 
-def test_scan_balanced_file_and_report_with_write_failure():
+def test_scan_balanced_file_and_report_with_write_failure() -> None:
     """
     Test to make sure that if we try and write a report file out and it fails,
     that we notify the user.
@@ -539,17 +606,13 @@ def test_scan_balanced_file_and_report_with_write_failure():
         expected_return_code = 1
         expected_output = ""
         if sys.platform.startswith("win"):
-            expected_error = """Unable to write to report file '{file}':
-  Error: [Errno 13] Permission denied: '{file}'
-""".replace(
-                "{file}", report_file_name
-            )
+            expected_error = f"""Unable to write to report file '{report_file_name}':
+  Error: [Errno 13] Permission denied: '{report_file_name}'
+"""
         else:
-            expected_error = """Unable to write to report file '{file}':
-  Error: [Errno 21] Is a directory: '{file}'
-""".replace(
-                "{file}", report_file_name
-            )
+            expected_error = f"""Unable to write to report file '{report_file_name}':
+  Error: [Errno 21] Is a directory: '{report_file_name}'
+"""
 
         # Act
         execute_results = scanner.invoke_main(arguments=supplied_arguments)

@@ -1,3 +1,8 @@
+"""
+This is a test file to check that pylint accepts too many lines in a file
+and that we get that information back in the pylint_utils module.
+"""
+
 # pylint: disable=too-many-lines
 
 

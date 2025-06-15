@@ -2,7 +2,9 @@
 Module to provide for very simple logging support.
 """
 
+import argparse
 import logging
+from typing import Any, Dict, cast
 
 
 class SimpleLogging:
@@ -10,7 +12,7 @@ class SimpleLogging:
     Class to provide for very simple logging support.
     """
 
-    __available_log_maps = {
+    __available_log_maps: Dict[str, int] = {
         "CRITICAL": logging.CRITICAL,
         "ERROR": logging.ERROR,
         "WARNING": logging.WARNING,
@@ -22,7 +24,7 @@ class SimpleLogging:
     __base_logger = None
 
     @staticmethod
-    def initialize_logging(args):
+    def initialize_logging(args: argparse.Namespace) -> None:
         """
         Initialize the logging subsytem using the arguments from the `add_standard_arguments` function.
         """
@@ -41,7 +43,7 @@ class SimpleLogging:
             )
 
     @staticmethod
-    def terminate_logging():
+    def terminate_logging() -> None:
         """
         Terminate any logging setup in the `initialize_logging` function.
         """
@@ -50,16 +52,18 @@ class SimpleLogging:
             SimpleLogging.__new_handler = None
 
     @staticmethod
-    def __log_level_type(argument):
+    def __log_level_type(argument: Any) -> str:
         """
         Function to help argparse limit the valid log levels.
         """
         if argument in SimpleLogging.__available_log_maps:
-            return argument
-        raise ValueError("Value '" + argument + "' is not a valid log level.")
+            return cast(str, argument)
+        raise ValueError(f"Value '{argument}' is not a valid log level.")
 
     @staticmethod
-    def add_standard_arguments(parser, default_log_level):
+    def add_standard_arguments(
+        parser: argparse.ArgumentParser, default_log_level: str
+    ) -> None:
         """
         Add any required arguments for adding logging.
         """

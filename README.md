@@ -10,6 +10,8 @@
 
 ## TL;DR
 
+Coming soon... better documentation!
+
 From my point of view, quality is not an absolute 0% or 100%.  For me, quality
 is a series of qualitative measurements that occur in the range between those two
 absolutes.  Given that viewpoint, I believe it logically follows that any qualitative
