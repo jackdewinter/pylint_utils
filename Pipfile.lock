@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "ced66b7bc624934729485fb50b123dcc247ea467e97ad4b9d1382301844056bf"
+            "sha256": "3d488d0fc644ad9a0623febdc422d4c440b5dd89956d7b4b80d41ae78de6c42f"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -747,12 +747,12 @@
         },
         "pytest-timeout": {
             "hashes": [
-                "sha256:12397729125c6ecbdaca01035b9e5239d4db97352320af155b3f5de1ba5165d9",
-                "sha256:68188cb703edfc6a18fad98dc25a3c61e9f24d644b0b70f33af545219fc7813e"
+                "sha256:7e68e90b01f9eff71332b25001f85c75495fc4e3a836701876183c4bcfd0540a",
+                "sha256:c42667e5cdadb151aeb5b26d114aff6bdf5a907f176a007a30b940d3d865b5c2"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.7'",
-            "version": "==2.3.1"
+            "version": "==2.4.0"
         },
         "pytest-xdist": {
             "hashes": [
