@@ -19,17 +19,17 @@ def parse_requirements():
 
 
 def get_semantic_version():
-    version_meta = runpy.run_path(f"./{PACKAGE_NAME}/version.py")
+    version_meta = runpy.run_path(f"./{MODULE_NAME}/version.py")
     return version_meta["__version__"]
 
 
 def get_project_name():
-    version_meta = runpy.run_path(f"./{PACKAGE_NAME}/version.py")
+    version_meta = runpy.run_path(f"./{MODULE_NAME}/version.py")
     return version_meta["__project_name__"]
 
 
 def get_description():
-    version_meta = runpy.run_path(f"./{PACKAGE_NAME}/version.py")
+    version_meta = runpy.run_path(f"./{MODULE_NAME}/version.py")
     return version_meta["__description__"]
 
 
@@ -66,8 +66,8 @@ PROJECT_URLS = {
     "Change Log": "https://pylint_utils.readthedocs.io/en/latest/changelog/",
 }
 
+MODULE_NAME = "pylint_utils"
 PACKAGE_NAME = "pylint_utils"
-PROJECT_NAME = get_project_name()
 SEMANTIC_VERSION = get_semantic_version()
 MINIMUM_PYTHON_VERSION = "3.9.0"
 
