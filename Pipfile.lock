@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "e8ae7b5ce439000daec945fdd646e715ab0171e0bf7056c104e87e754edd400e"
+            "sha256": "169622315ba10610fbc2c16fd39783e598a20ca6866869f0fac56899ad1065c8"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -633,12 +633,12 @@
         },
         "portalocker": {
             "hashes": [
-                "sha256:80e984e24de292ff258a5bea0e4f3f778fff84c0ae1275dbaebc4658de4aacb3",
-                "sha256:ec20f6dda2ad9ce89fa399a5f31f4f1495f515958f0cb7ca6543cef7bb5a749e"
+                "sha256:1f3002956a54a8c3730586c5c77bf18fae4149e07eaf1c29fc3faf4d5a3f89ac",
+                "sha256:3cdc5f565312224bc570c49337bd21428bba0ef363bbcf58b9ef4a9f11779968"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.9'",
-            "version": "==3.1.1"
+            "version": "==3.2.0"
         },
         "pre-commit": {
             "hashes": [
