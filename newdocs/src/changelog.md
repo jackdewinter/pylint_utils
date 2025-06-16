@@ -23,7 +23,7 @@
 ### Added
 
 - [Issue 6](https://github.com/jackdewinter/pylint_utils/issues/6)
-    - Standardizing on templates.
+    - Standardizing on project templates.
 
 <!--- pyml disable-next-line no-duplicate-heading-->
 ### Changed
