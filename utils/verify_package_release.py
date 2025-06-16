@@ -13,6 +13,7 @@ from typing import List
 WHEEL_REGEX = r"^(.*)-(.*)-py3-none-any\.whl$"
 TARBALL_REGEX = r"^(.*)-(.*)\.tar\.gz$"
 
+
 def __get_versions_from_pip() -> List[str]:
     pip_response = str(
         subprocess.run(
@@ -38,7 +39,9 @@ if not os.path.isdir(dist_directory):
 
 # That `dist` directory should have EXACTLY 2 files.
 files_in_directory = os.listdir(dist_directory)
-print(f"Verify that distribution directory: '{dist_directory}' contains exactly 2 files.")
+print(
+    f"Verify that distribution directory: '{dist_directory}' contains exactly 2 files."
+)
 if len(files_in_directory) != 2:
     print(f"Directory '{dist_directory}' must contain exactly two files.")
     sys.exit(1)
@@ -74,7 +77,9 @@ if wheel_match.group(2) != tarball_match.group(2):
     )
     sys.exit(1)
 
-print(f"Verify that version '{wheel_match.group(2)}' does not already exist in the package repository...")
+print(
+    f"Verify that version '{wheel_match.group(2)}' does not already exist in the package repository..."
+)
 available_versions = set(__get_versions_from_pip())
 if wheel_match.group(2) in available_versions:
     print(
